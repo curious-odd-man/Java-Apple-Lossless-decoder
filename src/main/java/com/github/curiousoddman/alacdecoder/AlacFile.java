@@ -12,9 +12,9 @@ package com.github.curiousoddman.alacdecoder;
 
 class AlacFile {
 
-    public int[] predictor_coef_table = new int[1024];
-    public int[] predictor_coef_table_a = new int[1024];
-    public int[] predictor_coef_table_b = new int[1024];
+    public final int[] predictor_coef_table = new int[1024];
+    public final int[] predictor_coef_table_a = new int[1024];
+    public final int[] predictor_coef_table_b = new int[1024];
     byte[] input_buffer;
     int ibIdx = 0;
     int input_buffer_bitaccumulator = 0; /* used so we can do arbitary
@@ -22,7 +22,7 @@ class AlacFile {
     int samplesize = 0;
     int numchannels = 0;
     int bytespersample = 0;
-    LeadingZeros lz = new LeadingZeros();
+    final LeadingZeros lz = new LeadingZeros();
     /* stuff from setinfo */
     int setinfo_max_samples_per_frame = 0; // 0x1000 = 4096
     int setinfo_7a = 0; // 0x00
@@ -40,11 +40,11 @@ class AlacFile {
     int setinfo_8a_rate = 0; // 0x0000ac44
     private final int buffer_size = 16384;
     /* buffers */
-    int[] predicterror_buffer_a = new int[buffer_size];
-    int[] predicterror_buffer_b = new int[buffer_size];
+    final int[] predicterror_buffer_a = new int[buffer_size];
+    final int[] predicterror_buffer_b = new int[buffer_size];
     int[] outputsamples_buffer_a = new int[buffer_size];
     /* end setinfo stuff */
     int[] outputsamples_buffer_b = new int[buffer_size];
-    int[] uncompressed_bytes_buffer_a = new int[buffer_size];
-    int[] uncompressed_bytes_buffer_b = new int[buffer_size];
+    final int[] uncompressed_bytes_buffer_a = new int[buffer_size];
+    final int[] uncompressed_bytes_buffer_b = new int[buffer_size];
 }

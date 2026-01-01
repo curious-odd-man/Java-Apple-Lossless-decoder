@@ -12,5 +12,5 @@
 package com.github.curiousoddman.alacdecoder;
 
 class Defines {
-    static int RICE_THRESHOLD = 8;
+    static final int RICE_THRESHOLD = 8;
 }

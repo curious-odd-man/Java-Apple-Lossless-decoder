@@ -27,7 +27,7 @@ public class AlacUtils {
 
         /* if qtmovie_read returns successfully, the stream is up to
          * the movie data, which can be used directly by the decoder */
-        int headerRead = DemuxUtils.qtmovieRead(alacInputStream,
+        int headerRead = DemuxUtils.qtmovieRead(
                 new QTMovieT(new DataInputStreamWrapper(alacInputStream)),
                 demuxResT
         );
@@ -102,7 +102,7 @@ public class AlacUtils {
         /* now fetch */
         outputBytes = destBufferSize;
 
-        outputBytes = AlacDecodeUtils.decode_frame(ac.getAlac(), read_buffer, pDestBuffer, outputBytes);
+        outputBytes = AlacDecodeUtils.decode_frame(ac.getAlac(), read_buffer, pDestBuffer);
 
         ac.setCurrentSampleBlock(ac.getCurrentSampleBlock() + 1);
         outputBytes -= ac.getOffset() * AlacGetBytesPerSample(ac);
@@ -154,15 +154,11 @@ public class AlacUtils {
         /* calculate output size */
         int num_samples = 0;
         int thissample_duration;
-        int thissample_bytesize = 0;
         SampleDuration sampleinfo = new SampleDuration();
         int i;
-        boolean error_found = false;
-        int retval = 0;
+        int retval;
 
         for (i = 0; i < ac.getDemux_res().getSampleByteSize().length; i++) {
-            thissample_duration = 0;
-            thissample_bytesize = 0;
 
             retval = get_sample_info(ac.getDemux_res(), i, sampleinfo);
 
@@ -170,7 +166,6 @@ public class AlacUtils {
                 return (-1);
             }
             thissample_duration = sampleinfo.getSampleDuration();
-            thissample_bytesize = sampleinfo.getSampleByteSize();
 
             num_samples += thissample_duration;
         }

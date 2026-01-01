@@ -50,17 +50,12 @@ class AlacDecodeUtils {
 
     /* supports reading 1 to 16 bits, in big endian format */
     static int readbits_16(AlacFile alac, int bits) {
-        int result = 0;
-        int new_accumulator = 0;
-        int part1 = 0;
-        int part2 = 0;
-        int part3 = 0;
 
-        part1 = (alac.input_buffer[alac.ibIdx] & 0xff);
-        part2 = (alac.input_buffer[alac.ibIdx + 1] & 0xff);
-        part3 = (alac.input_buffer[alac.ibIdx + 2] & 0xff);
+        int part1 = (alac.input_buffer[alac.ibIdx] & 0xff);
+        int part2 = (alac.input_buffer[alac.ibIdx + 1] & 0xff);
+        int part3 = (alac.input_buffer[alac.ibIdx + 2] & 0xff);
 
-        result = ((part1 << 16) | (part2 << 8) | part3);
+        int result = ((part1 << 16) | (part2 << 8) | part3);
 
         /* shift left by the number of bits we've already read,
          * so that the top 'n' bits of the 24 bits we read will
@@ -73,7 +68,7 @@ class AlacDecodeUtils {
          * n is 'bits' */
         result = result >> (24 - bits);
 
-        new_accumulator = (alac.input_buffer_bitaccumulator + bits);
+        int new_accumulator = (alac.input_buffer_bitaccumulator + bits);
 
         /* increase the buffer pointer if we've read over n bytes. */
         alac.ibIdx += (new_accumulator >> 3);
@@ -101,19 +96,14 @@ class AlacDecodeUtils {
 
     /* reads a single bit */
     static int readbit(AlacFile alac) {
-        int result = 0;
-        int new_accumulator = 0;
-        int part1 = 0;
 
-        part1 = (alac.input_buffer[alac.ibIdx] & 0xff);
-
-        result = part1;
+        int result = (alac.input_buffer[alac.ibIdx] & 0xff);
 
         result = result << alac.input_buffer_bitaccumulator;
 
         result = result >> 7 & 1;
 
-        new_accumulator = (alac.input_buffer_bitaccumulator + 1);
+        int new_accumulator = (alac.input_buffer_bitaccumulator + 1);
 
         alac.ibIdx += new_accumulator / 8;
 
@@ -122,8 +112,8 @@ class AlacDecodeUtils {
         return result;
     }
 
-    static void unreadbits(AlacFile alac, int bits) {
-        int new_accumulator = (alac.input_buffer_bitaccumulator - bits);
+    static void unreadbits(AlacFile alac) {
+        int new_accumulator = (alac.input_buffer_bitaccumulator - 1);
 
         alac.ibIdx += (new_accumulator >> 3);
 
@@ -132,7 +122,7 @@ class AlacDecodeUtils {
             alac.input_buffer_bitaccumulator *= -1;
     }
 
-    static LeadingZeros count_leading_zeros_extra(int curbyte, int output, LeadingZeros lz) {
+    static void count_leading_zeros_extra(int curbyte, int output, LeadingZeros lz) {
 
         if ((curbyte & 0xf0) == 0) {
             output += 4;
@@ -142,37 +132,35 @@ class AlacDecodeUtils {
         if ((curbyte & 0x8) != 0) {
             lz.setOutput(output);
             lz.setCurbyte(curbyte);
-            return lz;
+            return;
         }
         if ((curbyte & 0x4) != 0) {
             lz.setOutput(output + 1);
             lz.setCurbyte(curbyte);
-            return lz;
+            return;
         }
         if ((curbyte & 0x2) != 0) {
             lz.setOutput(output + 2);
             lz.setCurbyte(curbyte);
-            return lz;
+            return;
         }
         if ((curbyte & 0x1) != 0) {
             lz.setOutput(output + 3);
             lz.setCurbyte(curbyte);
-            return lz;
+            return;
         }
 
         /* shouldn't get here: */
 
         lz.setOutput(output + 4);
         lz.setCurbyte(curbyte);
-        return lz;
 
     }
 
     static int count_leading_zeros(int input, LeadingZeros lz) {
         int output = 0;
-        int curbyte = 0;
 
-        curbyte = input >> 24;
+        int curbyte = input >> 24;
         if (curbyte != 0) {
             count_leading_zeros_extra(curbyte, output, lz);
             output = lz.getOutput();
@@ -220,9 +208,8 @@ class AlacDecodeUtils {
 
         if (x > Defines.RICE_THRESHOLD) {
             // read the number from the bit stream (raw value)
-            int value = 0;
 
-            value = readbits(alac, readSampleSize);
+            int value = readbits(alac, readSampleSize);
 
             // mask value
             value &= ((0xffffffff) >> (32 - readSampleSize));
@@ -237,7 +224,7 @@ class AlacDecodeUtils {
                 if (extraBits > 1)
                     x += extraBits - 1;
                 else
-                    unreadbits(alac, 1);
+                    unreadbits(alac);
             }
         }
 
@@ -250,11 +237,8 @@ class AlacDecodeUtils {
         int signModifier = 0;
 
         while (outputCount < outputSize) {
-            int decodedValue = 0;
-            int finalValue = 0;
-            int k = 0;
 
-            k = 31 - rice_kmodifier - count_leading_zeros((history >> 9) + 3, alac.lz);
+            int k = 31 - rice_kmodifier - count_leading_zeros((history >> 9) + 3, alac.lz);
 
             if (k < 0)
                 k += rice_kmodifier;
@@ -262,10 +246,10 @@ class AlacDecodeUtils {
                 k = rice_kmodifier;
 
             // note: don't use rice_kmodifier_mask here (set mask to 0xFFFFFFFF)
-            decodedValue = entropy_decode_value(alac, readSampleSize, k, 0xFFFFFFFF);
+            int decodedValue = entropy_decode_value(alac, readSampleSize, k, 0xFFFFFFFF);
 
             decodedValue += signModifier;
-            finalValue = ((decodedValue + 1) / 2); // inc by 1 and shift out sign bit
+            int finalValue = ((decodedValue + 1) / 2); // inc by 1 and shift out sign bit
             if ((decodedValue & 1) != 0) // the sign is stored in the low bit
                 finalValue *= -1;
 
@@ -281,19 +265,17 @@ class AlacDecodeUtils {
 
             // special case, for compressed blocks of 0
             if ((history < 128) && (outputCount + 1 < outputSize)) {
-                int blockSize = 0;
 
                 signModifier = 1;
 
                 k = count_leading_zeros(history, alac.lz) + ((history + 16) / 64) - 24;
 
                 // note: blockSize is always 16bit
-                blockSize = entropy_decode_value(alac, 16, k, rice_kmodifier_mask);
+                int blockSize = entropy_decode_value(alac, 16, k, rice_kmodifier_mask);
 
                 // got blockSize 0s
                 if (blockSize > 0) {
-                    int countSize = 0;
-                    countSize = blockSize;
+                    int countSize = blockSize;
                     for (int j = 0; j < countSize; j++) {
                         outputBuffer[outputCount + 1 + j] = 0;
                     }
@@ -311,18 +293,16 @@ class AlacDecodeUtils {
     }
 
     static int[] predictor_decompress_fir_adapt(int[] error_buffer, int output_size, int readsamplesize, int[] predictor_coef_table, int predictor_coef_num, int predictor_quantitization) {
-        int buffer_out_idx = 0;
-        int[] buffer_out;
-        int bitsmove = 0;
+        int buffer_out_idx;
+        int bitsmove;
 
         /* first sample always copies */
-        buffer_out = error_buffer;
+        int[] buffer_out = error_buffer;
 
         if (predictor_coef_num == 0) {
             if (output_size <= 1)
                 return (buffer_out);
-            int sizeToCopy = 0;
-            sizeToCopy = (output_size - 1) * 4;
+            int sizeToCopy = (output_size - 1) * 4;
             System.arraycopy(error_buffer, 1, buffer_out, 1, sizeToCopy);
             return (buffer_out);
         }
@@ -336,11 +316,9 @@ class AlacDecodeUtils {
                 return (buffer_out);
 
             for (int i = 0; i < (output_size - 1); i++) {
-                int prev_value = 0;
-                int error_value = 0;
 
-                prev_value = buffer_out[i];
-                error_value = error_buffer[i + 1];
+                int prev_value = buffer_out[i];
+                int error_value = error_buffer[i + 1];
 
                 bitsmove = 32 - readsamplesize;
                 buffer_out[i + 1] = (((prev_value + error_value) << bitsmove) >> bitsmove);
@@ -351,9 +329,8 @@ class AlacDecodeUtils {
         /* read warm-up samples */
         if (predictor_coef_num > 0) {
             for (int i = 0; i < predictor_coef_num; i++) {
-                int val = 0;
 
-                val = buffer_out[i] + error_buffer[i + 1];
+                int val = buffer_out[i] + error_buffer[i + 1];
 
                 bitsmove = 32 - readsamplesize;
 
@@ -390,7 +367,7 @@ class AlacDecodeUtils {
 
                     while (predictor_num >= 0 && error_val > 0) {
                         int val = buffer_out[buffer_out_idx] - buffer_out[buffer_out_idx + predictor_coef_num - predictor_num];
-                        int sign = ((val < 0) ? (-1) : ((val > 0) ? (1) : (0)));
+                        int sign = (Integer.compare(val, 0));
 
                         predictor_coef_table[predictor_num] -= sign;
 
@@ -405,7 +382,7 @@ class AlacDecodeUtils {
 
                     while (predictor_num >= 0 && error_val < 0) {
                         int val = buffer_out[buffer_out_idx] - buffer_out[buffer_out_idx + predictor_coef_num - predictor_num];
-                        int sign = -((val < 0) ? (-1) : ((val > 0) ? (1) : (0)));
+                        int sign = -(Integer.compare(val, 0));
 
                         predictor_coef_table[predictor_num] -= sign;
 
@@ -432,16 +409,12 @@ class AlacDecodeUtils {
         /* weighted interlacing */
         if (0 != interlacing_leftweight) {
             for (int i = 0; i < numsamples; i++) {
-                int difference = 0;
-                int midright = 0;
-                int left = 0;
-                int right = 0;
 
-                midright = buffer_a[i];
-                difference = buffer_b[i];
+                int midright = buffer_a[i];
+                int difference = buffer_b[i];
 
-                right = (midright - ((difference * interlacing_leftweight) >> interlacing_shift));
-                left = (right + difference);
+                int right = (midright - ((difference * interlacing_leftweight) >> interlacing_shift));
+                int left = (right + difference);
 
                 /* output is always little endian */
 
@@ -454,11 +427,9 @@ class AlacDecodeUtils {
 
         /* otherwise basic interlacing took place */
         for (int i = 0; i < numsamples; i++) {
-            int left = 0;
-            int right = 0;
 
-            left = buffer_a[i];
-            right = buffer_b[i];
+            int left = buffer_a[i];
+            int right = buffer_b[i];
 
             /* output is always little endian */
 
@@ -475,33 +446,14 @@ class AlacDecodeUtils {
         /* weighted interlacing */
         if (interlacing_leftweight != 0) {
             for (int i = 0; i < numsamples; i++) {
-                int difference = 0;
-                int midright = 0;
-                int left = 0;
-                int right = 0;
 
-                midright = buffer_a[i];
-                difference = buffer_b[i];
+                int midright = buffer_a[i];
+                int difference = buffer_b[i];
 
-                right = midright - ((difference * interlacing_leftweight) >> interlacing_shift);
-                left = right + difference;
+                int right = midright - ((difference * interlacing_leftweight) >> interlacing_shift);
+                int left = right + difference;
 
-                if (uncompressed_bytes != 0) {
-                    int mask = ~(0xFFFFFFFF << (uncompressed_bytes * 8));
-                    left <<= (uncompressed_bytes * 8);
-                    right <<= (uncompressed_bytes * 8);
-
-                    left = left | (uncompressed_bytes_buffer_a[i] & mask);
-                    right = right | (uncompressed_bytes_buffer_b[i] & mask);
-                }
-
-                buffer_out[i * numchannels * 3] = (left & 0xFF);
-                buffer_out[i * numchannels * 3 + 1] = ((left >> 8) & 0xFF);
-                buffer_out[i * numchannels * 3 + 2] = ((left >> 16) & 0xFF);
-
-                buffer_out[i * numchannels * 3 + 3] = (right & 0xFF);
-                buffer_out[i * numchannels * 3 + 4] = ((right >> 8) & 0xFF);
-                buffer_out[i * numchannels * 3 + 5] = ((right >> 16) & 0xFF);
+                extracted_duplicate_code(uncompressed_bytes, uncompressed_bytes_buffer_a, uncompressed_bytes_buffer_b, buffer_out, numchannels, i, left, right);
             }
 
             return;
@@ -509,36 +461,37 @@ class AlacDecodeUtils {
 
         /* otherwise basic interlacing took place */
         for (int i = 0; i < numsamples; i++) {
-            int left = 0;
-            int right = 0;
 
-            left = buffer_a[i];
-            right = buffer_b[i];
+            int left = buffer_a[i];
+            int right = buffer_b[i];
 
-            if (uncompressed_bytes != 0) {
-                int mask = ~(0xFFFFFFFF << (uncompressed_bytes * 8));
-                left <<= (uncompressed_bytes * 8);
-                right <<= (uncompressed_bytes * 8);
-
-                left = left | (uncompressed_bytes_buffer_a[i] & mask);
-                right = right | (uncompressed_bytes_buffer_b[i] & mask);
-            }
-
-            buffer_out[i * numchannels * 3] = (left & 0xFF);
-            buffer_out[i * numchannels * 3 + 1] = ((left >> 8) & 0xFF);
-            buffer_out[i * numchannels * 3 + 2] = ((left >> 16) & 0xFF);
-
-            buffer_out[i * numchannels * 3 + 3] = (right & 0xFF);
-            buffer_out[i * numchannels * 3 + 4] = ((right >> 8) & 0xFF);
-            buffer_out[i * numchannels * 3 + 5] = ((right >> 16) & 0xFF);
+            extracted_duplicate_code(uncompressed_bytes, uncompressed_bytes_buffer_a, uncompressed_bytes_buffer_b, buffer_out, numchannels, i, left, right);
 
         }
 
     }
 
+    private static void extracted_duplicate_code(int uncompressed_bytes, int[] uncompressed_bytes_buffer_a, int[] uncompressed_bytes_buffer_b, int[] buffer_out, int numchannels, int i, int left, int right) {
+        if (uncompressed_bytes != 0) {
+            int mask = ~(0xFFFFFFFF << (uncompressed_bytes * 8));
+            left <<= (uncompressed_bytes * 8);
+            right <<= (uncompressed_bytes * 8);
 
-    public static int decode_frame(AlacFile alac, byte[] inbuffer, int[] outbuffer, int outputsize) {
-        int channels;
+            left = left | (uncompressed_bytes_buffer_a[i] & mask);
+            right = right | (uncompressed_bytes_buffer_b[i] & mask);
+        }
+
+        buffer_out[i * numchannels * 3] = (left & 0xFF);
+        buffer_out[i * numchannels * 3 + 1] = ((left >> 8) & 0xFF);
+        buffer_out[i * numchannels * 3 + 2] = ((left >> 16) & 0xFF);
+
+        buffer_out[i * numchannels * 3 + 3] = (right & 0xFF);
+        buffer_out[i * numchannels * 3 + 4] = ((right >> 8) & 0xFF);
+        buffer_out[i * numchannels * 3 + 5] = ((right >> 16) & 0xFF);
+    }
+
+
+    public static int decode_frame(AlacFile alac, byte[] inbuffer, int[] outbuffer) {
         int outputsamples = alac.setinfo_max_samples_per_frame;
 
         /* setup the stream */
@@ -547,20 +500,16 @@ class AlacDecodeUtils {
         alac.ibIdx = 0;
 
 
-        channels = readbits(alac, 3);
+        int channels = readbits(alac, 3);
 
-        outputsize = outputsamples * alac.bytespersample;
+        int outputsize = outputsamples * alac.bytespersample;
 
         if (channels == 0) // 1 channel
         {
-            int hassize;
-            int isnotcompressed;
-            int readsamplesize;
 
-            int uncompressed_bytes;
             int ricemodifier;
 
-            int tempPred = 0;
+            int tempPred;
 
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
@@ -569,11 +518,11 @@ class AlacDecodeUtils {
 
             readbits(alac, 12); // unknown, skip 12 bits
 
-            hassize = readbits(alac, 1); // the output sample size is stored soon
+            int hassize = readbits(alac, 1); // the output sample size is stored soon
 
-            uncompressed_bytes = readbits(alac, 2); // number of bytes in the (compressed) stream that are not compressed
+            int uncompressed_bytes = readbits(alac, 2); // number of bytes in the (compressed) stream that are not compressed
 
-            isnotcompressed = readbits(alac, 1); // whether the frame is compressed
+            int isnotcompressed = readbits(alac, 1); // whether the frame is compressed
 
             if (hassize != 0) {
                 /* now read the number of samples,
@@ -582,13 +531,10 @@ class AlacDecodeUtils {
                 outputsize = outputsamples * alac.bytespersample;
             }
 
-            readsamplesize = alac.setinfo_sample_size - (uncompressed_bytes * 8);
+            int readsamplesize = alac.setinfo_sample_size - (uncompressed_bytes * 8);
 
             if (isnotcompressed == 0) { // so it is compressed
                 int[] predictor_coef_table = alac.predictor_coef_table;
-                int predictor_coef_num;
-                int prediction_type;
-                int prediction_quantitization;
                 int i;
 
                 /* skip 16 bits, not sure what they are. seem to be used in
@@ -596,11 +542,11 @@ class AlacDecodeUtils {
                 readbits(alac, 8);
                 readbits(alac, 8);
 
-                prediction_type = readbits(alac, 4);
-                prediction_quantitization = readbits(alac, 4);
+                int prediction_type = readbits(alac, 4);
+                int prediction_quantitization = readbits(alac, 4);
 
                 ricemodifier = readbits(alac, 3);
-                predictor_coef_num = readbits(alac, 5);
+                int predictor_coef_num = readbits(alac, 5);
 
                 /* read the predictor table */
 
@@ -621,24 +567,11 @@ class AlacDecodeUtils {
                 }
 
 
-                entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
-
-                if (prediction_type == 0) { // adaptive fir
-                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
-                } else {
-                    System.err.println("FIXME: unhandled predicition type: " + prediction_type);
-
-                    /* i think the only other prediction type (or perhaps this is just a
-                     * boolean?) runs adaptive fir twice.. like:
-                     * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
-                     * predictor_decompress_fir_adapt(predictor_error, outputsamples ...)
-                     * little strange..
-                     */
-                }
+                another_duplicate_code(alac, outputsamples, readsamplesize, ricemodifier, predictor_coef_table, predictor_coef_num, prediction_type, prediction_quantitization);
 
             } else { // not compressed, easy case
                 if (alac.setinfo_sample_size <= 16) {
-                    int bitsmove = 0;
+                    int bitsmove;
                     for (int i = 0; i < outputsamples; i++) {
                         int audiobits = readbits(alac, alac.setinfo_sample_size);
                         bitsmove = 32 - alac.setinfo_sample_size;
@@ -689,9 +622,8 @@ class AlacDecodeUtils {
                         int sample = alac.outputsamples_buffer_a[i];
 
                         if (uncompressed_bytes != 0) {
-                            int mask = 0;
                             sample = sample << (uncompressed_bytes * 8);
-                            mask = ~(0xFFFFFFFF << (uncompressed_bytes * 8));
+                            int mask = ~(0xFFFFFFFF << (uncompressed_bytes * 8));
                             sample = sample | (alac.uncompressed_bytes_buffer_a[i] & mask);
                         }
 
@@ -720,11 +652,6 @@ class AlacDecodeUtils {
             }
         } else if (channels == 1) // 2 channels
         {
-            int hassize;
-            int isnotcompressed;
-            int readsamplesize;
-
-            int uncompressed_bytes;
 
             int interlacing_shift;
             int interlacing_leftweight;
@@ -736,11 +663,11 @@ class AlacDecodeUtils {
 
             readbits(alac, 12); // unknown, skip 12 bits
 
-            hassize = readbits(alac, 1); // the output sample size is stored soon
+            int hassize = readbits(alac, 1); // the output sample size is stored soon
 
-            uncompressed_bytes = readbits(alac, 2); // the number of bytes in the (compressed) stream that are not compressed
+            int uncompressed_bytes = readbits(alac, 2); // the number of bytes in the (compressed) stream that are not compressed
 
-            isnotcompressed = readbits(alac, 1); // whether the frame is compressed
+            int isnotcompressed = readbits(alac, 1); // whether the frame is compressed
 
             if (hassize != 0) {
                 /* now read the number of samples,
@@ -749,32 +676,24 @@ class AlacDecodeUtils {
                 outputsize = outputsamples * alac.bytespersample;
             }
 
-            readsamplesize = alac.setinfo_sample_size - (uncompressed_bytes * 8) + 1;
+            int readsamplesize = alac.setinfo_sample_size - (uncompressed_bytes * 8) + 1;
 
             if (isnotcompressed == 0) { // compressed
                 int[] predictor_coef_table_a = alac.predictor_coef_table_a;
-                int predictor_coef_num_a;
-                int prediction_type_a;
-                int prediction_quantitization_a;
-                int ricemodifier_a;
 
                 int[] predictor_coef_table_b = alac.predictor_coef_table_b;
-                int predictor_coef_num_b;
-                int prediction_type_b;
-                int prediction_quantitization_b;
-                int ricemodifier_b;
 
-                int tempPred = 0;
+                int tempPred;
 
                 interlacing_shift = readbits(alac, 8);
                 interlacing_leftweight = readbits(alac, 8);
 
                 /******** channel 1 ***********/
-                prediction_type_a = readbits(alac, 4);
-                prediction_quantitization_a = readbits(alac, 4);
+                int prediction_type_a = readbits(alac, 4);
+                int prediction_quantitization_a = readbits(alac, 4);
 
-                ricemodifier_a = readbits(alac, 3);
-                predictor_coef_num_a = readbits(alac, 5);
+                int ricemodifier_a = readbits(alac, 3);
+                int predictor_coef_num_a = readbits(alac, 5);
 
                 /* read the predictor table */
 
@@ -788,11 +707,11 @@ class AlacDecodeUtils {
                 }
 
                 /******** channel 2 *********/
-                prediction_type_b = readbits(alac, 4);
-                prediction_quantitization_b = readbits(alac, 4);
+                int prediction_type_b = readbits(alac, 4);
+                int prediction_quantitization_b = readbits(alac, 4);
 
-                ricemodifier_b = readbits(alac, 3);
-                predictor_coef_num_b = readbits(alac, 5);
+                int ricemodifier_b = readbits(alac, 3);
+                int predictor_coef_num_b = readbits(alac, 5);
 
                 /* read the predictor table */
 
@@ -815,15 +734,7 @@ class AlacDecodeUtils {
 
                 /* channel 1 */
 
-                entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_a * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
-
-                if (prediction_type_a == 0) { // adaptive fir
-
-                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a);
-
-                } else { // see mono case
-                    System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
-                }
+                another_duplicate_code(alac, outputsamples, readsamplesize, ricemodifier_a, predictor_coef_table_a, predictor_coef_num_a, prediction_type_a, prediction_quantitization_a);
 
                 /* channel 2 */
                 entropy_rice_decode(alac, alac.predicterror_buffer_b, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_b * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
@@ -838,11 +749,9 @@ class AlacDecodeUtils {
                     int bitsmove;
 
                     for (int i = 0; i < outputsamples; i++) {
-                        int audiobits_a;
-                        int audiobits_b;
 
-                        audiobits_a = readbits(alac, alac.setinfo_sample_size);
-                        audiobits_b = readbits(alac, alac.setinfo_sample_size);
+                        int audiobits_a = readbits(alac, alac.setinfo_sample_size);
+                        int audiobits_b = readbits(alac, alac.setinfo_sample_size);
 
                         bitsmove = 32 - alac.setinfo_sample_size;
 
@@ -899,6 +808,23 @@ class AlacDecodeUtils {
             }
         }
         return outputsize;
+    }
+
+    private static void another_duplicate_code(AlacFile alac, int outputsamples, int readsamplesize, int ricemodifier, int[] predictor_coef_table, int predictor_coef_num, int prediction_type, int prediction_quantitization) {
+        entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
+
+        if (prediction_type == 0) { // adaptive fir
+            alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
+        } else {
+            System.err.println("FIXME: unhandled predicition type: " + prediction_type);
+
+            /* i think the only other prediction type (or perhaps this is just a
+             * boolean?) runs adaptive fir twice.. like:
+             * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
+             * predictor_decompress_fir_adapt(predictor_error, outputsamples ...)
+             * little strange..
+             */
+        }
     }
 
     public static AlacFile create_alac(int samplesize, int numchannels) {

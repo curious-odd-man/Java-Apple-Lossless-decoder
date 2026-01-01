@@ -29,7 +29,7 @@ public class DecoderDemo {
     // little-endian data with (possibly) less than 3 bytes / sample.
 
     public static byte[] formatSamples(int bps, int[] src, int samcnt) {
-        int temp = 0;
+        int temp;
         int counter = 0;
         int counter2 = 0;
         byte[] dst = new byte[65536];
