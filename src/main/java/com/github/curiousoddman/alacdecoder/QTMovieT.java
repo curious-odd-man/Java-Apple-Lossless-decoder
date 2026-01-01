@@ -11,13 +11,16 @@
 
 package com.github.curiousoddman.alacdecoder;
 
-class QTMovieT {
-    public MyStream qtstream;
-    public DemuxResT res;
-    public int saved_mdat_pos;
+import lombok.Data;
 
-    public QTMovieT() {
-        saved_mdat_pos = 0;
-        qtstream = new MyStream();
+@Data
+public class QTMovieT {
+    private DataInputStreamWrapper qtstream;
+    private DemuxResT res;
+    private int savedMdatPos;
+
+    public QTMovieT(DataInputStreamWrapper qtstream) {
+        savedMdatPos = 0;
+        this.qtstream = qtstream;
     }
 }

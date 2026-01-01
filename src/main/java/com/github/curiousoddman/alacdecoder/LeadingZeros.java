@@ -11,7 +11,10 @@
 
 package com.github.curiousoddman.alacdecoder;
 
-class LeadingZeros {
-    public int curbyte = 0;
-    public int output = 0;
+import lombok.Data;
+
+@Data
+public class LeadingZeros {
+    private int curbyte = 0;
+    private int output = 0;
 }

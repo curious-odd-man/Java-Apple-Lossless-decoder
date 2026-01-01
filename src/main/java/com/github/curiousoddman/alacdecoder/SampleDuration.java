@@ -11,7 +11,10 @@
 
 package com.github.curiousoddman.alacdecoder;
 
-class SampleDuration {
-    int sample_byte_size = 0;
-    int sample_duration = 0;
+import lombok.Data;
+
+@Data
+public class SampleDuration {
+    private int sampleByteSize = 0;
+    private int sampleDuration = 0;
 }

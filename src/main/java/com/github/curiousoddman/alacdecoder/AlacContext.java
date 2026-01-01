@@ -11,13 +11,14 @@
 
 package com.github.curiousoddman.alacdecoder;
 
+import lombok.Data;
+
+@Data
 public class AlacContext {
-    public boolean error;
-    public String error_message = "";
-    DemuxResT demux_res = new DemuxResT();
-    AlacFile alac = new AlacFile();
-    AlacInputStream input_stream;
-    int current_sample_block = 0;
-    int offset;
-    byte[] read_buffer = new byte[1024 * 80]; // sample big enough to hold any input for a single alac frame
+    private DemuxResT demux_res = new DemuxResT();
+    private AlacFile alac = new AlacFile();
+    private AlacInputStream alacInputStream;
+    private int currentSampleBlock = 0;
+    private int offset;
+    private byte[] readBuffer = new byte[1024 * 80]; // sample big enough to hold any input for a single alac frame
 }

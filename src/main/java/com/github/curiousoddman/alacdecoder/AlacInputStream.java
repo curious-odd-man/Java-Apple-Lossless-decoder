@@ -20,13 +20,9 @@ public class AlacInputStream extends DataInputStream {
         super(in);
     }
 
-    public void seek(long pos) {
+    public void seek(long pos) throws IOException {
         if (in instanceof FileInputStream) {
-            try {
-                ((FileInputStream) in).getChannel().position(pos);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            ((FileInputStream) in).getChannel().position(pos);
         }
     }
 }

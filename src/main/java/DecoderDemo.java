@@ -108,7 +108,7 @@ public class DecoderDemo {
         );
     }
 
-    static void getBuffer(FileOutputStream fos, AlacContext ac) {
+    static void getBuffer(FileOutputStream fos, AlacContext ac) throws IOException {
         int destBufferSize = 1024 * 24 * 3; // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
         byte[] pcmBuffer;
         int bytesUnpacked;
@@ -145,25 +145,12 @@ public class DecoderDemo {
         System.exit(1);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
 
-        FileOutputStream fileOutputStream;
-        try {
-            fileOutputStream = new FileOutputStream(config.outputFileName());
-        } catch (IOException ioe) {
-            System.out.println("Cannot open output file: " + config.outputFileName() + " : Error : " + ioe);
-            System.exit(1);
-            return;
-        }
+        FileOutputStream fileOutputStream = new FileOutputStream(config.outputFileName());
 
         AlacContext ac = AlacUtils.AlacOpenFileInput(config.inputFileName());
-
-        if (ac.error) {
-            System.err.println("Sorry an error has occured");
-            System.err.println(ac.error_message);
-            System.exit(1);
-        }
 
         int numChannels = AlacUtils.AlacGetNumChannels(ac);
 
@@ -184,7 +171,7 @@ public class DecoderDemo {
 
         /* write wav output headers */
         if (config.wavFormat() == WavFormat.RAW_PCM) {
-            WavWriter.wavwriter_writeheaders(fileOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
+            WavWriter.writeHeaders(fileOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
         }
 
         /* will convert the entire buffer */

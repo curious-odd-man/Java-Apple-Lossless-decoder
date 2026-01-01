@@ -10,33 +10,32 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
-class DemuxResT {
-    public int format_read;
+import lombok.Data;
 
-    public int num_channels;
-    public int sample_size;
-    public int sample_rate;
-    public int format;
-    public int[] buf = new int[1024 * 80];
+import java.util.ArrayList;
+import java.util.List;
 
-    public SampleInfo[] time_to_sample = new SampleInfo[16];
-    public int num_time_to_samples;
+@Data
+public class DemuxResT {
+    private final List<SampleInfo> timeToSample = new ArrayList<>();
 
-    public int[] sample_byte_size;
+    private int formatRead;
 
-    public int codecdata_len;
+    private int numChannels;
+    private int sampleSize;
+    private int sampleRate;
+    private int format;
 
-    public int[] codecdata = new int[1024];
+    private int numTimeToSamples;
 
-    public int[] stco;
-    public ChunkInfo[] stsc;
+    private int[] sampleByteSize;
 
-    public int mdat_len;
+    private int codecDataLen;
 
-    public DemuxResT() {
-        // not sure how many of these I need, so make 16
-        for (int i = 0; i < 16; i++) {
-            time_to_sample[i] = new SampleInfo();
-        }
-    }
+    private int[] codecData = new int[1024];
+
+    private int[] stco;
+    private ChunkInfo[] stsc;
+
+    private int mdatLen;
 }

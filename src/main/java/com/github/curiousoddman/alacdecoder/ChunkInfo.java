@@ -1,11 +1,14 @@
 package com.github.curiousoddman.alacdecoder;
 
+import lombok.Data;
+
 /**
  * Author: Denis Tulskiy
  * Date: 4/9/11
  */
+@Data
 public class ChunkInfo {
-    int first_chunk;
-    int samples_per_chunk;
-    int sample_desc_index;
+    private int firstChunk;
+    private int samplesPerChunk;
+    private int sampleDescIndex;
 }

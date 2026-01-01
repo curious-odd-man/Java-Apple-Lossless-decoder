@@ -43,7 +43,6 @@ class AlacDecodeUtils {
         alac.setinfo_86 = ((inputbuffer[ptrIndex] << 24) + (inputbuffer[ptrIndex + 1] << 16) + (inputbuffer[ptrIndex + 2] << 8) + inputbuffer[ptrIndex + 3]);
         ptrIndex += 4;
         alac.setinfo_8a_rate = ((inputbuffer[ptrIndex] << 24) + (inputbuffer[ptrIndex + 1] << 16) + (inputbuffer[ptrIndex + 2] << 8) + inputbuffer[ptrIndex + 3]);
-        ptrIndex += 4;
 
     }
 
@@ -141,30 +140,30 @@ class AlacDecodeUtils {
             curbyte = curbyte >> 4;
 
         if ((curbyte & 0x8) != 0) {
-            lz.output = output;
-            lz.curbyte = curbyte;
+            lz.setOutput(output);
+            lz.setCurbyte(curbyte);
             return lz;
         }
         if ((curbyte & 0x4) != 0) {
-            lz.output = output + 1;
-            lz.curbyte = curbyte;
+            lz.setOutput(output + 1);
+            lz.setCurbyte(curbyte);
             return lz;
         }
         if ((curbyte & 0x2) != 0) {
-            lz.output = output + 2;
-            lz.curbyte = curbyte;
+            lz.setOutput(output + 2);
+            lz.setCurbyte(curbyte);
             return lz;
         }
         if ((curbyte & 0x1) != 0) {
-            lz.output = output + 3;
-            lz.curbyte = curbyte;
+            lz.setOutput(output + 3);
+            lz.setCurbyte(curbyte);
             return lz;
         }
 
         /* shouldn't get here: */
 
-        lz.output = output + 4;
-        lz.curbyte = curbyte;
+        lz.setOutput(output + 4);
+        lz.setCurbyte(curbyte);
         return lz;
 
     }
@@ -176,8 +175,7 @@ class AlacDecodeUtils {
         curbyte = input >> 24;
         if (curbyte != 0) {
             count_leading_zeros_extra(curbyte, output, lz);
-            output = lz.output;
-            curbyte = lz.curbyte;
+            output = lz.getOutput();
             return output;
         }
         output += 8;
@@ -185,8 +183,7 @@ class AlacDecodeUtils {
         curbyte = input >> 16;
         if ((curbyte & 0xFF) != 0) {
             count_leading_zeros_extra(curbyte, output, lz);
-            output = lz.output;
-            curbyte = lz.curbyte;
+            output = lz.getOutput();
 
             return output;
         }
@@ -195,8 +192,7 @@ class AlacDecodeUtils {
         curbyte = input >> 8;
         if ((curbyte & 0xFF) != 0) {
             count_leading_zeros_extra(curbyte, output, lz);
-            output = lz.output;
-            curbyte = lz.curbyte;
+            output = lz.getOutput();
 
             return output;
         }
@@ -205,8 +201,7 @@ class AlacDecodeUtils {
         curbyte = input;
         if ((curbyte & 0xFF) != 0) {
             count_leading_zeros_extra(curbyte, output, lz);
-            output = lz.output;
-            curbyte = lz.curbyte;
+            output = lz.getOutput();
 
             return output;
         }
