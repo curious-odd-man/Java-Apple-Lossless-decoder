@@ -9,7 +9,7 @@
  **
  */
 
-package com.beatofthedrum.alacdecoder;
+package com.github.curiousoddman.alacdecoder;
 
 class LeadingZeros {
     public int curbyte = 0;

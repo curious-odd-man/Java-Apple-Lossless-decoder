@@ -9,25 +9,26 @@
  **
  */
 
-import com.beatofthedrum.alacdecoder.AlacContext;
-import com.beatofthedrum.alacdecoder.AlacUtils;
-import com.beatofthedrum.alacdecoder.WavWriter;
+import com.github.curiousoddman.alacdecoder.AlacContext;
+import com.github.curiousoddman.alacdecoder.AlacUtils;
+import com.github.curiousoddman.alacdecoder.WavWriter;
 
-class DecoderDemo {
+import java.io.FileOutputStream;
+import java.io.IOException;
 
-    static java.io.FileOutputStream output_stream;
-    static int output_opened;
+public class DecoderDemo {
+    enum WavFormat {
+        RAW_PCM,
+        NORMAL
+    }
 
-    static int write_wav_format = 1;
-
-    static String input_file_n = "";
-    static String output_file_n = "";
-
+    private record Config(WavFormat wavFormat, String inputFileName, String outputFileName) {
+    }
 
     // Reformat samples from longs in processor's native endian mode to
     // little-endian data with (possibly) less than 3 bytes / sample.
 
-    public static byte[] format_samples(int bps, int[] src, int samcnt) {
+    public static byte[] formatSamples(int bps, int[] src, int samcnt) {
         int temp = 0;
         int counter = 0;
         int counter2 = 0;
@@ -68,72 +69,71 @@ class DecoderDemo {
     }
 
 
-    static void setup_environment(int argc, String[] argv) {
-        int i = argc;
-
-        int escaped = 0;
-
-        if (argc < 2)
-            usage();
-
-        int arg_idx = 0;
-        // loop through command-line arguments
-        while (arg_idx < argc) {
-            if (argv[arg_idx].startsWith("-")) {
-                if (argv[arg_idx].startsWith("-r") || argv[arg_idx].startsWith("-R")) {
-                    // raw PCM output
-                    write_wav_format = 0;
-                }
-            } else if (input_file_n.length() == 0) {
-                input_file_n = argv[arg_idx];
-            } else if (output_file_n.length() == 0) {
-                output_file_n = argv[arg_idx];
-            } else {
-                System.out.println("extra unknown argument: " + argv[arg_idx]);
-                usage();
-            }
-            arg_idx++;
+    static Config readCmdArgs(int argc, String[] argv) {
+        if (argc < 2) {
+            printUsageAndSystemExit();
         }
 
-        if (input_file_n.length() == 0 || output_file_n.length() == 0)
-            usage();
+        WavFormat wavFormat = WavFormat.NORMAL;
+        String inputFileName = "";
+        String outputFileName = "";
 
+        int argIdx = 0;
+        // loop through command-line arguments
+        while (argIdx < argc) {
+            if (argv[argIdx].startsWith("-")) {
+                if (argv[argIdx].startsWith("-r") || argv[argIdx].startsWith("-R")) {
+                    // raw PCM output
+                    wavFormat = WavFormat.RAW_PCM;
+                }
+            } else if (inputFileName.isEmpty()) {
+                inputFileName = argv[argIdx];
+            } else if (outputFileName.isEmpty()) {
+                outputFileName = argv[argIdx];
+            } else {
+                System.out.println("extra unknown argument: " + argv[argIdx]);
+                printUsageAndSystemExit();
+            }
+            argIdx++;
+        }
+
+        if (inputFileName.isEmpty() || outputFileName.isEmpty()) {
+            printUsageAndSystemExit();
+        }
+
+        return new Config(
+                wavFormat,
+                inputFileName,
+                outputFileName
+        );
     }
 
-    static void GetBuffer(AlacContext ac) {
+    static void getBuffer(FileOutputStream fos, AlacContext ac) {
         int destBufferSize = 1024 * 24 * 3; // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
-        byte[] pcmBuffer = new byte[65536];
-        int total_unpacked_bytes = 0;
-        int bytes_unpacked;
+        byte[] pcmBuffer;
+        int bytesUnpacked;
 
-        int[] pDestBuffer = new int[destBufferSize];
+        int[] destinationBuffer = new int[destBufferSize];
 
         int bps = AlacUtils.AlacGetBytesPerSample(ac);
 
+        do {
+            bytesUnpacked = AlacUtils.AlacUnpackSamples(ac, destinationBuffer);
 
-        while (true) {
-            bytes_unpacked = AlacUtils.AlacUnpackSamples(ac, pDestBuffer);
-
-            total_unpacked_bytes += bytes_unpacked;
-
-            if (bytes_unpacked > 0) {
-                pcmBuffer = format_samples(bps, pDestBuffer, bytes_unpacked);
+            if (bytesUnpacked > 0) {
+                pcmBuffer = formatSamples(bps, destinationBuffer, bytesUnpacked);
                 try {
-                    output_stream.write(pcmBuffer, 0, bytes_unpacked);
-                } catch (java.io.IOException ioe) {
+                    fos.write(pcmBuffer, 0, bytesUnpacked);
+                } catch (IOException ioe) {
                     System.err.println("Error writing data to output file. Error: " + ioe);
                 }
             }
 
-            if (bytes_unpacked == 0)
-                break;
-        } // end of while
-
-
+        } while (bytesUnpacked != 0);
     }
 
 
-    static void usage() {
+    static void printUsageAndSystemExit() {
         System.out.println("Usage: alac [options] inputfile outputfile");
         System.out.println("Decompresses the ALAC file specified");
         System.out.println("Options:");
@@ -146,28 +146,18 @@ class DecoderDemo {
     }
 
     public static void main(String[] args) {
-        AlacContext ac = new AlacContext();
-        int output_size;
-        int total_samples;
-        int sample_rate;
-        int num_channels;
-        int byteps;
-        int bitps;
+        Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
 
-        output_opened = 0;
-
-        setup_environment(args.length, args);    // checks all the parameters passed on command line
-
+        FileOutputStream fileOutputStream;
         try {
-            output_stream = new java.io.FileOutputStream(output_file_n);
-            output_opened = 1;
-        } catch (java.io.IOException ioe) {
-            System.out.println("Cannot open output file: " + output_file_n + " : Error : " + ioe);
-            output_opened = 0;
+            fileOutputStream = new FileOutputStream(config.outputFileName());
+        } catch (IOException ioe) {
+            System.out.println("Cannot open output file: " + config.outputFileName() + " : Error : " + ioe);
             System.exit(1);
+            return;
         }
 
-        ac = AlacUtils.AlacOpenFileInput(input_file_n);
+        AlacContext ac = AlacUtils.AlacOpenFileInput(config.inputFileName());
 
         if (ac.error) {
             System.err.println("Sorry an error has occured");
@@ -175,38 +165,36 @@ class DecoderDemo {
             System.exit(1);
         }
 
-        num_channels = AlacUtils.AlacGetNumChannels(ac);
+        int numChannels = AlacUtils.AlacGetNumChannels(ac);
 
-        System.out.println("The Apple Lossless file has " + num_channels + " channels");
+        System.out.println("The Apple Lossless file has " + numChannels + " channels");
 
-        total_samples = AlacUtils.AlacGetNumSamples(ac);
+        int totalSamples = AlacUtils.AlacGetNumSamples(ac);
 
-        System.out.println("The Apple Lossless file has " + total_samples + " samples");
+        System.out.println("The Apple Lossless file has " + totalSamples + " samples");
 
-        byteps = AlacUtils.AlacGetBytesPerSample(ac);
+        int bytesPerSample = AlacUtils.AlacGetBytesPerSample(ac);
 
-        System.out.println("The Apple Lossless file has " + byteps + " bytes per sample");
+        System.out.println("The Apple Lossless file has " + bytesPerSample + " bytes per sample");
 
-        sample_rate = AlacUtils.AlacGetSampleRate(ac);
+        int sampleRate = AlacUtils.AlacGetSampleRate(ac);
 
-        bitps = AlacUtils.AlacGetBitsPerSample(ac);
+        int bitsPerSample = AlacUtils.AlacGetBitsPerSample(ac);
 
 
         /* write wav output headers */
-        if (write_wav_format != 0) {
-            WavWriter.wavwriter_writeheaders(output_stream, (total_samples * byteps * num_channels), num_channels, sample_rate, byteps, bitps);
+        if (config.wavFormat() == WavFormat.RAW_PCM) {
+            WavWriter.wavwriter_writeheaders(fileOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
         }
 
         /* will convert the entire buffer */
-        GetBuffer(ac);
+        getBuffer(fileOutputStream, ac);
 
         AlacUtils.AlacCloseFile(ac);
 
-        if (output_opened != 0) {
-            try {
-                output_stream.close();
-            } catch (java.io.IOException ioe) {
-            }
+        try {
+            fileOutputStream.close();
+        } catch (IOException _) {
         }
     }
 }

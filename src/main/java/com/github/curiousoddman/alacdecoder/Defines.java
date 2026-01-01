@@ -9,7 +9,7 @@
  **
  */
 
-package com.beatofthedrum.alacdecoder;
+package com.github.curiousoddman.alacdecoder;
 
 class Defines {
     static int RICE_THRESHOLD = 8;

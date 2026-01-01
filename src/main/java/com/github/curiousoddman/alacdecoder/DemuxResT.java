@@ -8,7 +8,7 @@
  ** Distributed under the BSD Software License (see license.txt)
  **
  */
-package com.beatofthedrum.alacdecoder;
+package com.github.curiousoddman.alacdecoder;
 
 class DemuxResT {
     public int format_read;

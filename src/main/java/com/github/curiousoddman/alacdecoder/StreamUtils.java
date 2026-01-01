@@ -9,7 +9,7 @@
  **
  */
 
-package com.beatofthedrum.alacdecoder;
+package com.github.curiousoddman.alacdecoder;
 
 class StreamUtils {
     public static void stream_read(MyStream mystream, int size, int[] buf, int startPos) {

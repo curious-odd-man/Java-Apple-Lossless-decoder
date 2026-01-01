@@ -9,7 +9,7 @@
  **
  */
 
-package com.beatofthedrum.alacdecoder;
+package com.github.curiousoddman.alacdecoder;
 
 public class AlacContext {
     public boolean error;

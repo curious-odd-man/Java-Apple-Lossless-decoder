@@ -9,7 +9,7 @@
  **
  */
 
-package com.beatofthedrum.alacdecoder;
+package com.github.curiousoddman.alacdecoder;
 
 class SampleInfo {
     public int sample_count = 0;
