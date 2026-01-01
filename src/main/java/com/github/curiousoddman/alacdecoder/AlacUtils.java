@@ -55,8 +55,7 @@ public class AlacUtils {
             ac.setAlacInputStream(alacInputStream);
 
             QTMovieT qtmovie = new QTMovieT(new DataInputStreamWrapper(alacInputStream));
-            qtmovie.getQtstream().setCurrentPos(0);
-            StreamUtils.streamSkip(qtmovie.getQtstream(), qtmovie.getSavedMdatPos());
+            qtmovie.getQtstream().skip(qtmovie.getSavedMdatPos());
         }
 
         /* initialise the sound converter */
@@ -86,7 +85,7 @@ public class AlacUtils {
         SampleDuration sampleInfo = ac.getDemuxRes().getSampleInfo(ac.getCurrentSampleBlock());
         int sample_byte_size = sampleInfo.getSampleByteSize();
 
-        StreamUtils.streamRead(inputStream, sample_byte_size, read_buffer, 0);
+        inputStream.read(sample_byte_size, read_buffer, 0);
 
         /* now fetch */
 

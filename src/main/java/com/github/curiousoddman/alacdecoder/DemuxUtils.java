@@ -64,7 +64,7 @@ class DemuxUtils {
             int chunk_len;
 
             try {
-                chunk_len = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+                chunk_len = qtmovie.getQtstream().readUint32();
             } catch (Exception e) {
                 System.err.println("(top) error reading chunk_len - possibly number too large");
                 chunk_len = 1;
@@ -78,7 +78,7 @@ class DemuxUtils {
                 System.err.println("need 64bit support");
                 return 0;
             }
-            int chunk_id = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            int chunk_id = qtmovie.getQtstream().readUint32();
 
             if (chunk_id == MakeFourCC32(102, 116, 121, 112))    // fourcc equals ftyp
             {
@@ -110,10 +110,10 @@ class DemuxUtils {
             /*  these following atoms can be skipped !!!! */
             else if (chunk_id == MakeFourCC32(102, 114, 101, 101))    // fourcc equals free
             {
-                StreamUtils.streamSkip(qtmovie.getQtstream(), chunk_len - 8); // FIXME not 8
+                qtmovie.getQtstream().skip(chunk_len - 8); // FIXME not 8
             } else if (chunk_id == MakeFourCC32(106, 117, 110, 107))     // fourcc equals junk
             {
-                StreamUtils.streamSkip(qtmovie.getQtstream(), chunk_len - 8); // FIXME not 8
+                qtmovie.getQtstream().skip(chunk_len - 8); // FIXME not 8
             } else {
                 System.err.println("(top) unknown chunk id: " + SplitFourCC(chunk_id));
                 return 0;
@@ -126,7 +126,7 @@ class DemuxUtils {
     static void read_chunk_ftyp(QTMovieT qtmovie, int chunk_len) throws IOException {
         int size_remaining = chunk_len - 8; // FIXME: can't hardcode 8, size may be 64bit
 
-        int type = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+        int type = qtmovie.getQtstream().readUint32();
         size_remaining -= 4;
 
         if (type != MakeFourCC32(77, 52, 65, 32))        // "M4A " ascii values
@@ -134,14 +134,14 @@ class DemuxUtils {
             System.err.println("not M4A file");
             return;
         }
-        StreamUtils.streamReadUint32(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint32();
         size_remaining -= 4;
 
         /* compatible brands */
         while (size_remaining != 0) {
             /* unused */
             /*fourcc_t cbrand =*/
-            StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            qtmovie.getQtstream().readUint32();
             size_remaining -= 4;
         }
     }
@@ -160,7 +160,7 @@ class DemuxUtils {
         /* don't need anything from here atm, skip */
         int size_remaining = chunk_len - 8; // FIXME WRONG
 
-        StreamUtils.streamSkip(qtmovie.getQtstream(), size_remaining);
+        qtmovie.getQtstream().skip(size_remaining);
     }
 
     static void read_chunk_elst(QTMovieT qtmovie, int chunk_len) throws IOException {
@@ -172,32 +172,32 @@ class DemuxUtils {
     static void read_chunk_hdlr(QTMovieT qtmovie, int chunk_len) throws IOException {
 
         /* version */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
         // FIXME WRONG
         int size_remaining = chunk_len - 8;
         size_remaining -= 1;
         /* flags */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
         size_remaining -= 3;
 
         /* component type */
-        int comptype = StreamUtils.streamReadUint32(qtmovie.getQtstream());
-        int compsubtype = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+        int comptype = qtmovie.getQtstream().readUint32();
+        int compsubtype = qtmovie.getQtstream().readUint32();
         size_remaining -= 8;
 
         /* component manufacturer */
-        StreamUtils.streamReadUint32(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint32();
         size_remaining -= 4;
 
         /* flags */
-        StreamUtils.streamReadUint32(qtmovie.getQtstream());
-        StreamUtils.streamReadUint32(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint32();
+        qtmovie.getQtstream().readUint32();
         size_remaining -= 8;
 
         /* name */
-        int strlen = StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        int strlen = qtmovie.getQtstream().readUint8();
 
         /*
          ** rewrote this to handle case where we actually read more than required
@@ -206,21 +206,21 @@ class DemuxUtils {
 
         size_remaining -= 1;
 
-        StreamUtils.streamSkip(qtmovie.getQtstream(), size_remaining);
+        qtmovie.getQtstream().skip(size_remaining);
     }
 
     static int read_chunk_stsd(QTMovieT qtmovie) throws IOException {
 
         /* version */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
         /* flags */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
 
         int numentries = 0;
         try {
-            numentries = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            numentries = (qtmovie.getQtstream().readUint32());
         } catch (Exception e) {
             System.err.println("(read_chunk_stsd) error reading numentries - possibly number too large");
         }
@@ -234,8 +234,8 @@ class DemuxUtils {
         for (int i = 0; i < numentries; i++) {
             /* parse the alac atom contained within the stsd atom */
 
-            int entry_size = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
-            qtmovie.getRes().setFormat(StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            int entry_size = (qtmovie.getQtstream().readUint32());
+            qtmovie.getRes().setFormat(qtmovie.getQtstream().readUint32());
             int entry_remaining = entry_size;
             entry_remaining -= 8;
 
@@ -247,37 +247,37 @@ class DemuxUtils {
 
             /* sound info: */
 
-            StreamUtils.streamSkip(qtmovie.getQtstream(), 6); // reserved
+            qtmovie.getQtstream().skip(6); // reserved
             entry_remaining -= 6;
 
-            int version = StreamUtils.streamReadUint16(qtmovie.getQtstream());
+            int version = qtmovie.getQtstream().readUint16();
 
             if (version != 1)
                 System.err.println("unknown version??");
             entry_remaining -= 2;
 
             /* revision level */
-            StreamUtils.streamReadUint16(qtmovie.getQtstream());
+            qtmovie.getQtstream().readUint16();
             /* vendor */
-            StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            qtmovie.getQtstream().readUint32();
             entry_remaining -= 6;
 
             /* EH?? spec doesn't say theres an extra 16 bits here.. but there is! */
-            StreamUtils.streamReadUint16(qtmovie.getQtstream());
+            qtmovie.getQtstream().readUint16();
             entry_remaining -= 2;
 
             /* skip 4 - this is the top level num of channels and bits per sample */
-            StreamUtils.streamSkip(qtmovie.getQtstream(), 4);
+            qtmovie.getQtstream().skip(4);
             entry_remaining -= 4;
 
             /* compression id */
-            StreamUtils.streamReadUint16(qtmovie.getQtstream());
+            qtmovie.getQtstream().readUint16();
             /* packet size */
-            StreamUtils.streamReadUint16(qtmovie.getQtstream());
+            qtmovie.getQtstream().readUint16();
             entry_remaining -= 4;
 
             /* skip 4 - this is the top level sample rate */
-            StreamUtils.streamSkip(qtmovie.getQtstream(), 4);
+            qtmovie.getQtstream().skip(4);
             entry_remaining -= 4;
 
             /* remaining is codec data */
@@ -299,7 +299,7 @@ class DemuxUtils {
             qtmovie.getRes().getCodecData()[1] = MakeFourCC(97, 109, 114, 102);        // "amrf" ascii values
             qtmovie.getRes().getCodecData()[2] = MakeFourCC(99, 97, 108, 97);        // "cala" ascii values
 
-            StreamUtils.streamRead(qtmovie.getQtstream(), entry_remaining, qtmovie.getRes().getCodecData(), 12);    // codecdata buffer should be +12
+            qtmovie.getQtstream().read(entry_remaining, qtmovie.getRes().getCodecData(), 12);    // codecdata buffer should be +12
             entry_remaining -= entry_remaining;
 
             /* We need to read the bits per sample, number of channels and sample rate from the codec data i.e. the alac atom within
@@ -331,7 +331,7 @@ class DemuxUtils {
             qtmovie.getRes().setSampleRate((((qtmovie.getRes().getCodecData()[ptrIndex] & 0xff) << 24) | ((qtmovie.getRes().getCodecData()[ptrIndex + 1] & 0xff) << 16) | ((qtmovie.getRes().getCodecData()[ptrIndex + 2] & 0xff) << 8) | (qtmovie.getRes().getCodecData()[ptrIndex + 3] & 0xff)));
 
             if (entry_remaining != 0)    // was comparing to null
-                StreamUtils.streamSkip(qtmovie.getQtstream(), entry_remaining);
+                qtmovie.getQtstream().skip(entry_remaining);
 
             qtmovie.getRes().setFormatRead(1);
             if (qtmovie.getRes().getFormat() != MakeFourCC32(97, 108, 97, 99))        // "alac" ascii values
@@ -346,19 +346,19 @@ class DemuxUtils {
     static void read_chunk_stts(QTMovieT qtmovie, int chunk_len) throws IOException {
 
         /* version */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
         // FIXME WRONG
         int size_remaining = chunk_len - 8;
         size_remaining -= 1;
         /* flags */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
         size_remaining -= 3;
 
         int numentries = 0;
         try {
-            numentries = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            numentries = (qtmovie.getQtstream().readUint32());
         } catch (Exception e) {
             System.err.println("(read_chunk_stts) error reading numentries - possibly number too large");
         }
@@ -368,32 +368,32 @@ class DemuxUtils {
         qtmovie.getRes().setNumTimeToSamples(numentries);
 
         for (int i = 0; i < numentries; i++) {
-            qtmovie.getRes().getTimeToSample().get(i).setSampleCount(StreamUtils.streamReadUint32(qtmovie.getQtstream()));
-            qtmovie.getRes().getTimeToSample().get(i).setSampleDuration(StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            qtmovie.getRes().getTimeToSample().get(i).setSampleCount(qtmovie.getQtstream().readUint32());
+            qtmovie.getRes().getTimeToSample().get(i).setSampleDuration(qtmovie.getQtstream().readUint32());
             size_remaining -= 8;
         }
 
         if (size_remaining != 0) {
             System.err.println("(read_chunk_stts) size remaining?");
-            StreamUtils.streamSkip(qtmovie.getQtstream(), size_remaining);
+            qtmovie.getQtstream().skip(size_remaining);
         }
     }
 
     static void read_chunk_stsz(QTMovieT qtmovie, int chunk_len) throws IOException {
 
         /* version */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
         // FIXME WRONG
         int size_remaining = chunk_len - 8;
         size_remaining -= 1;
         /* flags */
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
-        StreamUtils.streamReadUint8(qtmovie.getQtstream());
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
+        qtmovie.getQtstream().readUint8();
         size_remaining -= 3;
 
         /* default sample size */
-        int uniform_size = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+        int uniform_size = (qtmovie.getQtstream().readUint32());
         int i;
         if (uniform_size != 0) {
             /*
@@ -401,7 +401,7 @@ class DemuxUtils {
              ** they are all the same size
              */
 
-            int uniform_num = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            int uniform_num = (qtmovie.getQtstream().readUint32());
 
             qtmovie.getRes().setSampleByteSize(new int[uniform_num]);
 
@@ -414,7 +414,7 @@ class DemuxUtils {
 
         int numentries = 0;
         try {
-            numentries = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            numentries = (qtmovie.getQtstream().readUint32());
         } catch (Exception e) {
             System.err.println("(read_chunk_stsz) error reading numentries - possibly number too large");
         }
@@ -424,14 +424,14 @@ class DemuxUtils {
         qtmovie.getRes().setSampleByteSize(new int[numentries]);
 
         for (i = 0; i < numentries; i++) {
-            qtmovie.getRes().getSampleByteSize()[i] = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            qtmovie.getRes().getSampleByteSize()[i] = (qtmovie.getQtstream().readUint32());
 
             size_remaining -= 4;
         }
 
         if (size_remaining != 0) {
             System.err.println("(read_chunk_stsz) size remaining?");
-            StreamUtils.streamSkip(qtmovie.getQtstream(), size_remaining);
+            qtmovie.getQtstream().skip(size_remaining);
         }
     }
 
@@ -442,7 +442,7 @@ class DemuxUtils {
             int sub_chunk_len;
 
             try {
-                sub_chunk_len = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+                sub_chunk_len = (qtmovie.getQtstream().readUint32());
             } catch (Exception e) {
                 System.err.println("(read_chunk_stbl) error reading sub_chunk_len - possibly number too large");
                 sub_chunk_len = 0;
@@ -453,7 +453,7 @@ class DemuxUtils {
                 return 0;
             }
 
-            int sub_chunk_id = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
             if (sub_chunk_id == MakeFourCC32(115, 116, 115, 100))    // fourcc equals stsd
             {
@@ -488,13 +488,13 @@ class DemuxUtils {
     private static void read_chunk_stco(QTMovieT qtmovie) throws IOException {
         //skip header and size
         DataInputStreamWrapper stream = qtmovie.getQtstream();
-        StreamUtils.streamSkip(stream, 4);
+        stream.skip(4);
 
-        int num_entries = StreamUtils.streamReadUint32(stream);
+        int num_entries = stream.readUint32();
 
         qtmovie.getRes().setStco(new int[num_entries]);
         for (int i = 0; i < num_entries; i++) {
-            qtmovie.getRes().getStco()[i] = StreamUtils.streamReadUint32(stream);
+            qtmovie.getRes().getStco()[i] = stream.readUint32();
         }
     }
 
@@ -505,14 +505,14 @@ class DemuxUtils {
         //skip header and size
         DataInputStreamWrapper stream = qtmovie.getQtstream();
         //skip version and other junk
-        StreamUtils.streamSkip(stream, 4);
-        int num_entries = StreamUtils.streamReadUint32(stream);
+        stream.skip(4);
+        int num_entries = stream.readUint32();
         qtmovie.getRes().setStsc(new ChunkInfo[num_entries]);
         for (int i = 0; i < num_entries; i++) {
             ChunkInfo entry = new ChunkInfo();
-            entry.setFirstChunk(StreamUtils.streamReadUint32(stream));
-            entry.setSamplesPerChunk(StreamUtils.streamReadUint32(stream));
-            entry.setSampleDescIndex(StreamUtils.streamReadUint32(stream));
+            entry.setFirstChunk(stream.readUint32());
+            entry.setSamplesPerChunk(stream.readUint32());
+            entry.setSampleDescIndex(stream.readUint32());
             qtmovie.getRes().getStsc()[i] = entry;
         }
     }
@@ -523,7 +523,7 @@ class DemuxUtils {
         /**** SOUND HEADER CHUNK ****/
 
         try {
-            media_info_size = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            media_info_size = (qtmovie.getQtstream().readUint32());
         } catch (Exception e) {
             System.err.println("(read_chunk_minf) error reading media_info_size - possibly number too large");
             media_info_size = 0;
@@ -533,13 +533,13 @@ class DemuxUtils {
             System.err.println("unexpected size in media info\n");
             return 0;
         }
-        if (StreamUtils.streamReadUint32(qtmovie.getQtstream()) != MakeFourCC32(115, 109, 104, 100))    // "smhd" ascii values
+        if (qtmovie.getQtstream().readUint32() != MakeFourCC32(115, 109, 104, 100))    // "smhd" ascii values
         {
             System.err.println("not a sound header! can't handle this.");
             return 0;
         }
         /* now skip the rest */
-        StreamUtils.streamSkip(qtmovie.getQtstream(), 16 - 8);
+        qtmovie.getQtstream().skip(16 - 8);
         // FIXME WRONG
         int size_remaining = chunk_len - 8;
         size_remaining -= 16;
@@ -549,19 +549,19 @@ class DemuxUtils {
 
         int dinf_size;
         try {
-            dinf_size = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            dinf_size = (qtmovie.getQtstream().readUint32());
         } catch (Exception e) {
             System.err.println("(read_chunk_minf) error reading dinf_size - possibly number too large");
             dinf_size = 0;
         }
 
-        if (StreamUtils.streamReadUint32(qtmovie.getQtstream()) != MakeFourCC32(100, 105, 110, 102))    // "dinf" ascii values
+        if (qtmovie.getQtstream().readUint32() != MakeFourCC32(100, 105, 110, 102))    // "dinf" ascii values
         {
             System.err.println("expected dinf, didn't get it.");
             return 0;
         }
         /* skip it */
-        StreamUtils.streamSkip(qtmovie.getQtstream(), dinf_size - 8);
+        qtmovie.getQtstream().skip(dinf_size - 8);
         size_remaining -= dinf_size;
         /****/
 
@@ -569,13 +569,13 @@ class DemuxUtils {
         /**** SAMPLE TABLE ****/
         int stbl_size;
         try {
-            stbl_size = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+            stbl_size = (qtmovie.getQtstream().readUint32());
         } catch (Exception e) {
             System.err.println("(read_chunk_minf) error reading stbl_size - possibly number too large");
             stbl_size = 0;
         }
 
-        if (StreamUtils.streamReadUint32(qtmovie.getQtstream()) != MakeFourCC32(115, 116, 98, 108))    // "stbl" ascii values
+        if (qtmovie.getQtstream().readUint32() != MakeFourCC32(115, 116, 98, 108))    // "stbl" ascii values
         {
             System.err.println("expected stbl, didn't get it.");
             return 0;
@@ -586,7 +586,7 @@ class DemuxUtils {
 
         if (size_remaining != 0) {
             System.err.println("(read_chunk_minf) - size remaining?");
-            StreamUtils.streamSkip(qtmovie.getQtstream(), size_remaining);
+            qtmovie.getQtstream().skip(size_remaining);
         }
 
         return 1;
@@ -599,7 +599,7 @@ class DemuxUtils {
             int sub_chunk_len;
 
             try {
-                sub_chunk_len = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+                sub_chunk_len = (qtmovie.getQtstream().readUint32());
             } catch (Exception e) {
                 System.err.println("(read_chunk_mdia) error reading sub_chunk_len - possibly number too large");
                 sub_chunk_len = 0;
@@ -610,7 +610,7 @@ class DemuxUtils {
                 return 0;
             }
 
-            int sub_chunk_id = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
             if (sub_chunk_id == MakeFourCC32(109, 100, 104, 100))    // fourcc equals mdhd
             {
@@ -641,7 +641,7 @@ class DemuxUtils {
             int sub_chunk_len;
 
             try {
-                sub_chunk_len = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+                sub_chunk_len = (qtmovie.getQtstream().readUint32());
             } catch (Exception e) {
                 System.err.println("(read_chunk_trak) error reading sub_chunk_len - possibly number too large");
                 sub_chunk_len = 0;
@@ -652,7 +652,7 @@ class DemuxUtils {
                 return 0;
             }
 
-            int sub_chunk_id = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
             if (sub_chunk_id == MakeFourCC32(116, 107, 104, 100))    // fourcc equals tkhd
             {
@@ -701,7 +701,7 @@ class DemuxUtils {
             int sub_chunk_len;
 
             try {
-                sub_chunk_len = (StreamUtils.streamReadUint32(qtmovie.getQtstream()));
+                sub_chunk_len = (qtmovie.getQtstream().readUint32());
             } catch (Exception e) {
                 System.err.println("(read_chunk_moov) error reading sub_chunk_len - possibly number too large");
                 sub_chunk_len = 0;
@@ -712,7 +712,7 @@ class DemuxUtils {
                 return 0;
             }
 
-            int sub_chunk_id = StreamUtils.streamReadUint32(qtmovie.getQtstream());
+            int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
             if (sub_chunk_id == MakeFourCC32(109, 118, 104, 100))    // fourcc equals mvhd
             {
@@ -732,7 +732,7 @@ class DemuxUtils {
                 read_chunk_iods(qtmovie, sub_chunk_len);
             } else if (sub_chunk_id == MakeFourCC32(102, 114, 101, 101))     // fourcc equals free
             {
-                StreamUtils.streamSkip(qtmovie.getQtstream(), sub_chunk_len - 8); // FIXME not 8
+                qtmovie.getQtstream().skip(sub_chunk_len - 8); // FIXME not 8
             } else {
                 System.err.println("(moov) unknown chunk id: " + SplitFourCC(sub_chunk_id));
                 return 0;
@@ -752,9 +752,8 @@ class DemuxUtils {
 
         qtmovie.getRes().setMdatLen(size_remaining);
         if (skip_mdat != 0) {
-            qtmovie.setSavedMdatPos(StreamUtils.stream_tell(qtmovie.getQtstream()));
-
-            StreamUtils.streamSkip(qtmovie.getQtstream(), size_remaining);
+            qtmovie.setSavedMdatPos(qtmovie.getQtstream().getCurrentPos());
+            qtmovie.getQtstream().skip(size_remaining);
         }
     }
 
