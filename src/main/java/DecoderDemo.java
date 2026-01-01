@@ -44,9 +44,7 @@ public class DecoderDemo {
             }
 
             /* will convert the entire buffer */
-            getBuffer(fileOutputStream, ac);
-
-            AlacUtils.alacCloseFile(ac);
+            writeData(fileOutputStream, ac);
         }
     }
 
@@ -55,9 +53,7 @@ public class DecoderDemo {
 
     // Reformat samples from longs in processor's native endian mode to
     // little-endian data with (possibly) less than 3 bytes / sample.
-
     public static byte[] formatSamples(int bps, int[] src, int samcnt) {
-        int temp;
         int counter = 0;
         int counter2 = 0;
         byte[] dst = new byte[65536];
@@ -73,7 +69,7 @@ public class DecoderDemo {
 
             case 2:
                 while (samcnt > 0) {
-                    temp = src[counter2];
+                    int temp = src[counter2];
                     dst[counter] = (byte) temp;
                     counter++;
                     dst[counter] = (byte) (temp >>> 8);
@@ -135,25 +131,17 @@ public class DecoderDemo {
         );
     }
 
-    static void getBuffer(FileOutputStream fos, AlacContext ac) throws IOException {
-        int destBufferSize = 1024 * 24 * 3; // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
-        byte[] pcmBuffer;
-        int bytesUnpacked;
-
-        int[] destinationBuffer = new int[destBufferSize];
-
+    private static void writeData(FileOutputStream fos, AlacContext ac) throws IOException {
+        int[] destinationBuffer = new int[AlacUtils.DEST_BUFFER_SIZE];
         int bps = ac.getBytesPerSample();
 
+        int bytesUnpacked;
         do {
             bytesUnpacked = AlacUtils.AlacUnpackSamples(ac, destinationBuffer);
 
             if (bytesUnpacked > 0) {
-                pcmBuffer = formatSamples(bps, destinationBuffer, bytesUnpacked);
-                try {
-                    fos.write(pcmBuffer, 0, bytesUnpacked);
-                } catch (IOException ioe) {
-                    System.err.println("Error writing data to output file. Error: " + ioe);
-                }
+                byte[] pcmBuffer = formatSamples(bps, destinationBuffer, bytesUnpacked);
+                fos.write(pcmBuffer, 0, bytesUnpacked);
             }
 
         } while (bytesUnpacked != 0);

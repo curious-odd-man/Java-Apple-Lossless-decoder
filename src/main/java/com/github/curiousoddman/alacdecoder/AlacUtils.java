@@ -14,6 +14,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 public class AlacUtils {
+    // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
+    public static final int DEST_BUFFER_SIZE = 1024 * 24 * 3;
 
     public static AlacContext alacOpenFileInput(String inputFileName) throws IOException {
         DemuxResT demuxResT = new DemuxResT();
@@ -69,15 +71,9 @@ public class AlacUtils {
         return ac;
     }
 
-    public static void alacCloseFile(AlacContext ac) throws IOException {
-        if (null != ac.getAlacInputStream()) {
-            ac.getAlacInputStream().close();
-        }
-    }
-
     // Heres where we extract the actual music data
 
-    public static int AlacUnpackSamples(AlacContext ac, int[] pDestBuffer) throws IOException {
+    public static int AlacUnpackSamples(AlacContext ac, int[] destBuffer) throws IOException {
         byte[] read_buffer = ac.getReadBuffer();
         DataInputStreamWrapper inputStream = new DataInputStreamWrapper(ac.getAlacInputStream());
 
@@ -93,15 +89,12 @@ public class AlacUtils {
         StreamUtils.streamRead(inputStream, sample_byte_size, read_buffer, 0);
 
         /* now fetch */
-        // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
-        int destBufferSize = 1024 * 24 * 3;
-        int outputBytes = destBufferSize;
 
-        outputBytes = AlacDecodeUtils.decode_frame(ac.getAlacFileData(), read_buffer, pDestBuffer);
+        int outputBytes = AlacDecodeUtils.decode_frame(ac.getAlacFileData(), read_buffer, destBuffer);
 
         ac.setCurrentSampleBlock(ac.getCurrentSampleBlock() + 1);
         outputBytes -= ac.getOffset() * ac.getBytesPerSample();
-        System.arraycopy(pDestBuffer, ac.getOffset(), pDestBuffer, 0, outputBytes);
+        System.arraycopy(destBuffer, ac.getOffset(), destBuffer, 0, outputBytes);
         ac.setOffset(0);
         return outputBytes;
     }
