@@ -1,4 +1,4 @@
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.stream;
 
 import java.io.DataInputStream;
 import java.io.FileInputStream;

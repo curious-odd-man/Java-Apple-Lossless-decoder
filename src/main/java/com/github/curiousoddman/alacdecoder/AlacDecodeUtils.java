@@ -10,6 +10,10 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
+import com.github.curiousoddman.alacdecoder.data.AlacFileData;
+import com.github.curiousoddman.alacdecoder.data.Defines;
+import com.github.curiousoddman.alacdecoder.data.LeadingZeros;
+
 class AlacDecodeUtils {
 
     public static void alac_set_info(AlacFileData alac, int[] inputbuffer) {

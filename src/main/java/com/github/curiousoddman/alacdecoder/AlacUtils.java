@@ -10,6 +10,12 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
+import com.github.curiousoddman.alacdecoder.data.AlacFileData;
+import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
+import com.github.curiousoddman.alacdecoder.data.SampleDuration;
+import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
+import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 

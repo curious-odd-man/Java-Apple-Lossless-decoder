@@ -11,6 +11,7 @@
 
 package com.github.curiousoddman.alacdecoder;
 
+import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import lombok.Data;
 
 @Data

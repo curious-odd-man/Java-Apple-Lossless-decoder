@@ -9,7 +9,7 @@
  **
  */
 
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.stream;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

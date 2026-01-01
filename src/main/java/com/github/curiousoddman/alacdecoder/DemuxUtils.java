@@ -12,6 +12,9 @@
 package com.github.curiousoddman.alacdecoder;
 
 
+import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
+import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
+
 import java.io.IOException;
 
 class DemuxUtils {

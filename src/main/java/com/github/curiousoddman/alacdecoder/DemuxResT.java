@@ -10,6 +10,9 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
+import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
+import com.github.curiousoddman.alacdecoder.data.SampleDuration;
+import com.github.curiousoddman.alacdecoder.data.SampleInfo;
 import lombok.Data;
 
 import java.util.ArrayList;

@@ -9,8 +9,8 @@
  **
  */
 
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.data;
 
-class Defines {
-    static final int RICE_THRESHOLD = 8;
+public class Defines {
+    public static final int RICE_THRESHOLD = 8;
 }

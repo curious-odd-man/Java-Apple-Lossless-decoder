@@ -1,5 +1,5 @@
 /*
- ** SampleInfo.java
+ ** SampleDuration.java
  **
  ** Copyright (c) 2011 Peter McQuillan
  **
@@ -9,12 +9,14 @@
  **
  */
 
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.data;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-public class SampleInfo {
-    private int sampleCount = 0;
+@AllArgsConstructor
+public class SampleDuration {
+    private int sampleByteSize = 0;
     private int sampleDuration = 0;
 }
