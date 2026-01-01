@@ -15,7 +15,7 @@ class AlacFile {
     public int[] predictor_coef_table = new int[1024];
     public int[] predictor_coef_table_a = new int[1024];
     public int[] predictor_coef_table_b = new int[1024];
-    byte input_buffer[];
+    byte[] input_buffer;
     int ibIdx = 0;
     int input_buffer_bitaccumulator = 0; /* used so we can do arbitary
 						bit reads */
@@ -38,13 +38,13 @@ class AlacFile {
     int setinfo_86 = 0; // 0x00069fe4
     /* bit rate (avarge)?? */
     int setinfo_8a_rate = 0; // 0x0000ac44
-    private int buffer_size = 16384;
+    private final int buffer_size = 16384;
     /* buffers */
-    int predicterror_buffer_a[] = new int[buffer_size];
-    int predicterror_buffer_b[] = new int[buffer_size];
-    int outputsamples_buffer_a[] = new int[buffer_size];
+    int[] predicterror_buffer_a = new int[buffer_size];
+    int[] predicterror_buffer_b = new int[buffer_size];
+    int[] outputsamples_buffer_a = new int[buffer_size];
     /* end setinfo stuff */
-    int outputsamples_buffer_b[] = new int[buffer_size];
-    int uncompressed_bytes_buffer_a[] = new int[buffer_size];
-    int uncompressed_bytes_buffer_b[] = new int[buffer_size];
+    int[] outputsamples_buffer_b = new int[buffer_size];
+    int[] uncompressed_bytes_buffer_a = new int[buffer_size];
+    int[] uncompressed_bytes_buffer_b = new int[buffer_size];
 }

@@ -139,7 +139,7 @@ public class DecoderDemo {
         System.out.println("Options:");
         System.out.println("  -r                write output as raw PCM data. Default");
         System.out.println("                    is in WAV format.");
-        System.out.println("");
+        System.out.println();
         System.out.println("This port of the code is (c) Peter McQuillan 2011");
         System.out.println("Original software is (c) 2005 David Hammerton");
         System.exit(1);
