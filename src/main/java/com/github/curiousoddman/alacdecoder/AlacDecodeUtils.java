@@ -12,7 +12,7 @@ package com.github.curiousoddman.alacdecoder;
 
 class AlacDecodeUtils {
 
-    public static void alac_set_info(AlacFile alac, int[] inputbuffer) {
+    public static void alac_set_info(AlacFileData alac, int[] inputbuffer) {
         int ptrIndex = 0;
         ptrIndex += 4; // size
         ptrIndex += 4; // frma
@@ -49,7 +49,7 @@ class AlacDecodeUtils {
     /* stream reading */
 
     /* supports reading 1 to 16 bits, in big endian format */
-    static int readbits_16(AlacFile alac, int bits) {
+    static int readbits_16(AlacFileData alac, int bits) {
 
         int part1 = (alac.input_buffer[alac.ibIdx] & 0xff);
         int part2 = (alac.input_buffer[alac.ibIdx + 1] & 0xff);
@@ -80,7 +80,7 @@ class AlacDecodeUtils {
     }
 
     /* supports reading 1 to 32 bits, in big endian format */
-    static int readbits(AlacFile alac, int bits) {
+    static int readbits(AlacFileData alac, int bits) {
         int result = 0;
 
         if (bits > 16) {
@@ -95,7 +95,7 @@ class AlacDecodeUtils {
     }
 
     /* reads a single bit */
-    static int readbit(AlacFile alac) {
+    static int readbit(AlacFileData alac) {
 
         int result = (alac.input_buffer[alac.ibIdx] & 0xff);
 
@@ -112,7 +112,7 @@ class AlacDecodeUtils {
         return result;
     }
 
-    static void unreadbits(AlacFile alac) {
+    static void unreadbits(AlacFileData alac) {
         int new_accumulator = (alac.input_buffer_bitaccumulator - 1);
 
         alac.ibIdx += (new_accumulator >> 3);
@@ -198,7 +198,7 @@ class AlacDecodeUtils {
         return output;
     }
 
-    public static int entropy_decode_value(AlacFile alac, int readSampleSize, int k, int rice_kmodifier_mask) {
+    public static int entropy_decode_value(AlacFileData alac, int readSampleSize, int k, int rice_kmodifier_mask) {
         int x = 0; // decoded value
 
         // read x, number of 1s before 0 represent the rice value.
@@ -231,7 +231,7 @@ class AlacDecodeUtils {
         return x;
     }
 
-    public static void entropy_rice_decode(AlacFile alac, int[] outputBuffer, int outputSize, int readSampleSize, int rice_initialhistory, int rice_kmodifier, int rice_historymult, int rice_kmodifier_mask) {
+    public static void entropy_rice_decode(AlacFileData alac, int[] outputBuffer, int outputSize, int readSampleSize, int rice_initialhistory, int rice_kmodifier, int rice_historymult, int rice_kmodifier_mask) {
         int history = rice_initialhistory;
         int outputCount = 0;
         int signModifier = 0;
@@ -491,7 +491,7 @@ class AlacDecodeUtils {
     }
 
 
-    public static int decode_frame(AlacFile alac, byte[] inbuffer, int[] outbuffer) {
+    public static int decode_frame(AlacFileData alac, byte[] inbuffer, int[] outbuffer) {
         int outputsamples = alac.setinfo_max_samples_per_frame;
 
         /* setup the stream */
@@ -810,7 +810,7 @@ class AlacDecodeUtils {
         return outputsize;
     }
 
-    private static void another_duplicate_code(AlacFile alac, int outputsamples, int readsamplesize, int ricemodifier, int[] predictor_coef_table, int predictor_coef_num, int prediction_type, int prediction_quantitization) {
+    private static void another_duplicate_code(AlacFileData alac, int outputsamples, int readsamplesize, int ricemodifier, int[] predictor_coef_table, int predictor_coef_num, int prediction_type, int prediction_quantitization) {
         entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
 
         if (prediction_type == 0) { // adaptive fir
@@ -827,8 +827,8 @@ class AlacDecodeUtils {
         }
     }
 
-    public static AlacFile create_alac(int samplesize, int numchannels) {
-        AlacFile newfile = new AlacFile();
+    public static AlacFileData create_alac(int samplesize, int numchannels) {
+        AlacFileData newfile = new AlacFileData();
 
         newfile.samplesize = samplesize;
         newfile.numchannels = numchannels;

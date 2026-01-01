@@ -10,7 +10,7 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
-class AlacFile {
+class AlacFileData {
 
     public final int[] predictor_coef_table = new int[1024];
     public final int[] predictor_coef_table_a = new int[1024];

@@ -15,7 +15,7 @@ import java.io.IOException;
 
 public class AlacUtils {
 
-    public static AlacContext AlacOpenFileInput(String inputFileName) throws IOException {
+    public static AlacContext alacOpenFileInput(String inputFileName) throws IOException {
         DemuxResT demuxResT = new DemuxResT();
         AlacContext ac = new AlacContext();
 
@@ -59,17 +59,17 @@ public class AlacUtils {
 
         /* initialise the sound converter */
 
-        AlacFile alac = AlacDecodeUtils.create_alac(demuxResT.getSampleSize(), demuxResT.getNumChannels());
+        AlacFileData alac = AlacDecodeUtils.create_alac(demuxResT.getSampleSize(), demuxResT.getNumChannels());
 
         AlacDecodeUtils.alac_set_info(alac, demuxResT.getCodecData());
 
-        ac.setDemux_res(demuxResT);
-        ac.setAlac(alac);
+        ac.setDemuxRes(demuxResT);
+        ac.setAlacFileData(alac);
 
         return ac;
     }
 
-    public static void AlacCloseFile(AlacContext ac) throws IOException {
+    public static void alacCloseFile(AlacContext ac) throws IOException {
         if (null != ac.getAlacInputStream()) {
             ac.getAlacInputStream().close();
         }
@@ -78,130 +78,36 @@ public class AlacUtils {
     // Heres where we extract the actual music data
 
     public static int AlacUnpackSamples(AlacContext ac, int[] pDestBuffer) throws IOException {
-        SampleDuration sampleinfo = new SampleDuration();
         byte[] read_buffer = ac.getReadBuffer();
-        int destBufferSize = 1024 * 24 * 3; // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
-        int outputBytes;
         DataInputStreamWrapper inputStream = new DataInputStreamWrapper(ac.getAlacInputStream());
 
         // if current_sample_block is beyond last block then finished
 
-        if (ac.getCurrentSampleBlock() >= ac.getDemux_res().getSampleByteSize().length) {
+        if (ac.getCurrentSampleBlock() >= ac.getDemuxRes().getSampleByteSize().length) {
             return 0;
         }
 
-        if (get_sample_info(ac.getDemux_res(), ac.getCurrentSampleBlock(), sampleinfo) == 0) {
-            // getting sample failed
-            return 0;
-        }
-
-        int sample_byte_size = sampleinfo.getSampleByteSize();
+        SampleDuration sampleInfo = ac.getDemuxRes().getSampleInfo(ac.getCurrentSampleBlock());
+        int sample_byte_size = sampleInfo.getSampleByteSize();
 
         StreamUtils.streamRead(inputStream, sample_byte_size, read_buffer, 0);
 
         /* now fetch */
-        outputBytes = destBufferSize;
+        // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
+        int destBufferSize = 1024 * 24 * 3;
+        int outputBytes = destBufferSize;
 
-        outputBytes = AlacDecodeUtils.decode_frame(ac.getAlac(), read_buffer, pDestBuffer);
+        outputBytes = AlacDecodeUtils.decode_frame(ac.getAlacFileData(), read_buffer, pDestBuffer);
 
         ac.setCurrentSampleBlock(ac.getCurrentSampleBlock() + 1);
-        outputBytes -= ac.getOffset() * AlacGetBytesPerSample(ac);
+        outputBytes -= ac.getOffset() * ac.getBytesPerSample();
         System.arraycopy(pDestBuffer, ac.getOffset(), pDestBuffer, 0, outputBytes);
         ac.setOffset(0);
         return outputBytes;
     }
 
-
-    // Returns the sample rate of the specified ALAC file
-
-    public static int AlacGetSampleRate(AlacContext ac) {
-        if (null != ac && ac.getDemux_res().getSampleRate() != 0) {
-            return ac.getDemux_res().getSampleRate();
-        } else {
-            return (44100);
-        }
-    }
-
-    public static int AlacGetNumChannels(AlacContext ac) {
-        if (null != ac && ac.getDemux_res().getNumChannels() != 0) {
-            return ac.getDemux_res().getNumChannels();
-        } else {
-            return 2;
-        }
-    }
-
-    public static int AlacGetBitsPerSample(AlacContext ac) {
-        if (null != ac && ac.getDemux_res().getSampleSize() != 0) {
-            return ac.getDemux_res().getSampleSize();
-        } else {
-            return 16;
-        }
-    }
-
-
-    public static int AlacGetBytesPerSample(AlacContext ac) {
-        if (null != ac && ac.getDemux_res().getSampleSize() != 0) {
-            return (int) Math.ceil(ac.getDemux_res().getSampleSize() / 8);
-        } else {
-            return 2;
-        }
-    }
-
-
     // Get total number of samples contained in the Apple Lossless file, or -1 if unknown
 
-    public static int AlacGetNumSamples(AlacContext ac) {
-        /* calculate output size */
-        int num_samples = 0;
-        int thissample_duration;
-        SampleDuration sampleinfo = new SampleDuration();
-        int i;
-        int retval;
-
-        for (i = 0; i < ac.getDemux_res().getSampleByteSize().length; i++) {
-
-            retval = get_sample_info(ac.getDemux_res(), i, sampleinfo);
-
-            if (retval == 0) {
-                return (-1);
-            }
-            thissample_duration = sampleinfo.getSampleDuration();
-
-            num_samples += thissample_duration;
-        }
-
-        return (num_samples);
-    }
-
-
-    static int get_sample_info(DemuxResT demux_res, int samplenum, SampleDuration sampleinfo) {
-        int duration_index_accum = 0;
-        int duration_cur_index = 0;
-
-        if (samplenum >= demux_res.getSampleByteSize().length) {
-            System.err.println("sample " + samplenum + " does not exist ");
-            return 0;
-        }
-
-        if (demux_res.getNumTimeToSamples() == 0)        // was null
-        {
-            System.err.println("no time to samples");
-            return 0;
-        }
-        while ((demux_res.getTimeToSample().get(duration_cur_index).getSampleCount() + duration_index_accum) <= samplenum) {
-            duration_index_accum += demux_res.getTimeToSample().get(duration_cur_index).getSampleCount();
-            duration_cur_index++;
-            if (duration_cur_index >= demux_res.getNumTimeToSamples()) {
-                System.err.println("sample " + samplenum + " does not have a duration");
-                return 0;
-            }
-        }
-
-        sampleinfo.setSampleDuration(demux_res.getTimeToSample().get(duration_cur_index).getSampleDuration());
-        sampleinfo.setSampleByteSize(demux_res.getSampleByteSize()[samplenum]);
-
-        return 1;
-    }
 
     /**
      * sets position in pcm samples
@@ -211,11 +117,10 @@ public class AlacUtils {
      */
 
     public static void AlacSetPosition(AlacContext ac, long position) throws IOException {
-        DemuxResT res = ac.getDemux_res();
+        DemuxResT res = ac.getDemuxRes();
 
         int current_position = 0;
         int current_sample = 0;
-        SampleDuration sampleDuration = new SampleDuration();
         for (int i = 0; i < res.getStsc().length; i++) {
             ChunkInfo chunkInfo = res.getStsc()[i];
             int last_chunk;
@@ -230,14 +135,13 @@ public class AlacUtils {
                 int pos = res.getStco()[chunk - 1];
                 int sample_count = chunkInfo.getSamplesPerChunk();
                 while (sample_count > 0) {
-                    int ret = get_sample_info(res, current_sample, sampleDuration);
-                    if (ret == 0) return;
+                    SampleDuration sampleDuration = res.getSampleInfo(current_sample);
                     current_position += sampleDuration.getSampleDuration();
                     if (position < current_position) {
                         ac.getAlacInputStream().seek(pos);
                         ac.setCurrentSampleBlock(current_sample);
                         ac.setOffset((int) (position - (current_position - sampleDuration.getSampleDuration()))
-                                * AlacGetNumChannels(ac));
+                                * ac.getNumChannels());
                         return;
                     }
                     pos += sampleDuration.getSampleByteSize();

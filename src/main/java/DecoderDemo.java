@@ -22,6 +22,34 @@ public class DecoderDemo {
         NORMAL
     }
 
+    public static void main(String[] args) throws IOException {
+        Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
+
+        try (FileOutputStream fileOutputStream = new FileOutputStream(config.outputFileName());
+             AlacContext ac = AlacUtils.alacOpenFileInput(config.inputFileName())) {
+
+            int numChannels = ac.getNumChannels();
+            System.out.println("The Apple Lossless file has " + numChannels + " channels");
+            int totalSamples = ac.getNumSamples();
+            System.out.println("The Apple Lossless file has " + totalSamples + " samples");
+            int bytesPerSample = ac.getBytesPerSample();
+            System.out.println("The Apple Lossless file has " + bytesPerSample + " bytes per sample");
+            int sampleRate = ac.getSampleRate();
+            int bitsPerSample = ac.getBitsPerSample();
+
+
+            /* write wav output headers */
+            if (config.wavFormat() == WavFormat.RAW_PCM) {
+                WavWriter.writeHeaders(fileOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
+            }
+
+            /* will convert the entire buffer */
+            getBuffer(fileOutputStream, ac);
+
+            AlacUtils.alacCloseFile(ac);
+        }
+    }
+
     private record Config(WavFormat wavFormat, String inputFileName, String outputFileName) {
     }
 
@@ -68,8 +96,7 @@ public class DecoderDemo {
         return dst;
     }
 
-
-    static Config readCmdArgs(int argc, String[] argv) {
+    private static Config readCmdArgs(int argc, String[] argv) {
         if (argc < 2) {
             printUsageAndSystemExit();
         }
@@ -115,7 +142,7 @@ public class DecoderDemo {
 
         int[] destinationBuffer = new int[destBufferSize];
 
-        int bps = AlacUtils.AlacGetBytesPerSample(ac);
+        int bps = ac.getBytesPerSample();
 
         do {
             bytesUnpacked = AlacUtils.AlacUnpackSamples(ac, destinationBuffer);
@@ -145,44 +172,6 @@ public class DecoderDemo {
         System.exit(1);
     }
 
-    public static void main(String[] args) throws IOException {
-        Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
 
-        FileOutputStream fileOutputStream = new FileOutputStream(config.outputFileName());
-
-        AlacContext ac = AlacUtils.AlacOpenFileInput(config.inputFileName());
-
-        int numChannels = AlacUtils.AlacGetNumChannels(ac);
-
-        System.out.println("The Apple Lossless file has " + numChannels + " channels");
-
-        int totalSamples = AlacUtils.AlacGetNumSamples(ac);
-
-        System.out.println("The Apple Lossless file has " + totalSamples + " samples");
-
-        int bytesPerSample = AlacUtils.AlacGetBytesPerSample(ac);
-
-        System.out.println("The Apple Lossless file has " + bytesPerSample + " bytes per sample");
-
-        int sampleRate = AlacUtils.AlacGetSampleRate(ac);
-
-        int bitsPerSample = AlacUtils.AlacGetBitsPerSample(ac);
-
-
-        /* write wav output headers */
-        if (config.wavFormat() == WavFormat.RAW_PCM) {
-            WavWriter.writeHeaders(fileOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
-        }
-
-        /* will convert the entire buffer */
-        getBuffer(fileOutputStream, ac);
-
-        AlacUtils.AlacCloseFile(ac);
-
-        try {
-            fileOutputStream.close();
-        } catch (IOException _) {
-        }
-    }
 }
 

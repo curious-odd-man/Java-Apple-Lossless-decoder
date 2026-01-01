@@ -38,4 +38,29 @@ public class DemuxResT {
     private ChunkInfo[] stsc;
 
     private int mdatLen;
+
+    public SampleDuration getSampleInfo(int sampleIndex) {
+        if (sampleIndex >= getSampleByteSize().length) {
+            throw new IllegalStateException("sample " + sampleIndex + " does not exist ");
+        }
+
+        if (getNumTimeToSamples() == 0) {
+            throw new IllegalStateException("no time to samples");
+        }
+
+        int durationCurIndex = 0;
+        int durationIndexAccum = 0;
+        while ((getTimeToSample().get(durationCurIndex).getSampleCount() + durationIndexAccum) <= sampleIndex) {
+            durationIndexAccum += getTimeToSample().get(durationCurIndex).getSampleCount();
+            durationCurIndex++;
+            if (durationCurIndex >= getNumTimeToSamples()) {
+                throw new IllegalStateException("sample " + sampleIndex + " does not have a duration");
+            }
+        }
+
+        return new SampleDuration(
+                getTimeToSample().get(durationCurIndex).getSampleDuration(),
+                getSampleByteSize()[sampleIndex]
+        );
+    }
 }
