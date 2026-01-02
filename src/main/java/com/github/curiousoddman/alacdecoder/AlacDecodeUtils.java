@@ -15,79 +15,6 @@ import com.github.curiousoddman.alacdecoder.data.Defines;
 import com.github.curiousoddman.alacdecoder.data.LeadingZeros;
 
 class AlacDecodeUtils {
-    /* supports reading 1 to 16 bits, in big endian format */
-    static int readbits_16(AlacFileData alac, int bits) {
-        byte[] inputBuffer = alac.getInputBuffer();
-        int ibIdx = alac.getIbIdx();
-        int part1 = inputBuffer[ibIdx] & 0xff;
-        int part2 = inputBuffer[ibIdx + 1] & 0xff;
-        int part3 = inputBuffer[ibIdx + 2] & 0xff;
-
-        int result = part1 << 16 | part2 << 8 | part3;
-
-        /* shift left by the number of bits we've already read,
-         * so that the top 'n' bits of the 24 bits we read will
-         * be the return bits */
-        result = result << alac.getInputBufferBitaccumulator();
-
-        result = result & 0x00ffffff;
-
-        /* and then only want the top 'n' bits from that, where
-         * n is 'bits' */
-        result = result >> 24 - bits;
-
-        int new_accumulator = alac.getInputBufferBitaccumulator() + bits;
-
-        /* increase the buffer pointer if we've read over n bytes. */
-        alac.setIbIdx(alac.getIbIdx() + (new_accumulator >> 3));
-
-        /* and the remainder goes back into the bit accumulator */
-        alac.setInputBufferBitaccumulator(new_accumulator & 7);
-
-        return result;
-    }
-
-    /* supports reading 1 to 32 bits, in big endian format */
-    static int readbits(AlacFileData alac, int bits) {
-        int result = 0;
-
-        if (bits > 16) {
-            bits -= 16;
-
-            result = readbits_16(alac, 16) << bits;
-        }
-
-        result |= readbits_16(alac, bits);
-
-        return result;
-    }
-
-    /* reads a single bit */
-    static int readbit(AlacFileData alac) {
-
-        int result = alac.getInputBuffer()[alac.getIbIdx()] & 0xff;
-
-        result = result << alac.getInputBufferBitaccumulator();
-
-        result = result >> 7 & 1;
-
-        int new_accumulator = alac.getInputBufferBitaccumulator() + 1;
-
-        alac.setIbIdx(alac.getIbIdx() + new_accumulator / 8);
-
-        alac.setInputBufferBitaccumulator(new_accumulator % 8);
-
-        return result;
-    }
-
-    static void unreadbits(AlacFileData alac) {
-        int new_accumulator = alac.getInputBufferBitaccumulator() - 1;
-
-        alac.setIbIdx(alac.getIbIdx() + (new_accumulator >> 3));
-
-        alac.setInputBufferBitaccumulator(new_accumulator & 7);
-    }
-
     static void count_leading_zeros_extra(int curbyte, int output, LeadingZeros lz) {
 
         if ((curbyte & 0xf0) == 0) {
@@ -169,14 +96,14 @@ class AlacDecodeUtils {
         int x = 0; // decoded value
 
         // read x, number of 1s before 0 represent the rice value.
-        while (x <= Defines.RICE_THRESHOLD && readbit(alac) != 0) {
+        while (x <= Defines.RICE_THRESHOLD && alac.readbit() != 0) {
             x++;
         }
 
         if (x > Defines.RICE_THRESHOLD) {
             // read the number from the bit stream (raw value)
 
-            int value = readbits(alac, readSampleSize);
+            int value = alac.readbits(readSampleSize);
 
             // mask value
             value &= 0xffffffff >> 32 - readSampleSize;
@@ -184,14 +111,14 @@ class AlacDecodeUtils {
             x = value;
         } else {
             if (k != 1) {
-                int extraBits = readbits(alac, k);
+                int extraBits = alac.readbits(k);
 
                 x *= (1 << k) - 1 & rice_kmodifier_mask;
 
                 if (extraBits > 1) {
                     x += extraBits - 1;
                 } else {
-                    unreadbits(alac);
+                    alac.unreadbits();
                 }
             }
         }
@@ -468,7 +395,7 @@ class AlacDecodeUtils {
         alac.setInputBufferBitaccumulator(0);
         alac.setIbIdx(0);
 
-        int channels = readbits(alac, 3);
+        int channels = alac.readbits(3);
 
         int outputsize = outputsamples * alac.getBytesPerSample();
 
@@ -477,20 +404,20 @@ class AlacDecodeUtils {
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
-            readbits(alac, 4);
+            alac.readbits(4);
 
-            readbits(alac, 12); // unknown, skip 12 bits
+            alac.readbits(12); // unknown, skip 12 bits
 
-            int hassize = readbits(alac, 1); // the output sample size is stored soon
+            int hassize = alac.readbits(1); // the output sample size is stored soon
 
-            int uncompressed_bytes = readbits(alac, 2); // number of bytes in the (compressed) stream that are not compressed
+            int uncompressed_bytes = alac.readbits(2); // number of bytes in the (compressed) stream that are not compressed
 
-            int isnotcompressed = readbits(alac, 1); // whether the frame is compressed
+            int isnotcompressed = alac.readbits(1); // whether the frame is compressed
 
             if (hassize != 0) {
                 /* now read the number of samples,
                  * as a 32bit integer */
-                outputsamples = readbits(alac, 32);
+                outputsamples = alac.readbits(32);
                 outputsize = outputsamples * alac.getBytesPerSample();
             }
 
@@ -501,20 +428,20 @@ class AlacDecodeUtils {
 
                 /* skip 16 bits, not sure what they are. seem to be used in
                  * two channel case */
-                readbits(alac, 8);
-                readbits(alac, 8);
+                alac.readbits(8);
+                alac.readbits(8);
 
-                int prediction_type = readbits(alac, 4);
-                int prediction_quantitization = readbits(alac, 4);
+                int prediction_type = alac.readbits(4);
+                int prediction_quantitization = alac.readbits(4);
 
-                int ricemodifier = readbits(alac, 3);
-                int predictor_coef_num = readbits(alac, 5);
+                int ricemodifier = alac.readbits(3);
+                int predictor_coef_num = alac.readbits(5);
 
                 /* read the predictor table */
 
                 int i;
                 for (i = 0; i < predictor_coef_num; i++) {
-                    int tempPred = readbits(alac, 16);
+                    int tempPred = alac.readbits(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -525,7 +452,7 @@ class AlacDecodeUtils {
 
                 if (uncompressed_bytes != 0) {
                     for (i = 0; i < outputsamples; i++) {
-                        alac.getUncompressedBytesBufferA()[i] = readbits(alac, uncompressed_bytes * 8);
+                        alac.getUncompressedBytesBufferA()[i] = alac.readbits(uncompressed_bytes * 8);
                     }
                 }
 
@@ -548,7 +475,7 @@ class AlacDecodeUtils {
             } else { // not compressed, easy case
                 if (alac.getSampleSizeRaw() <= 16) {
                     for (int i = 0; i < outputsamples; i++) {
-                        int audiobits = readbits(alac, alac.getSampleSizeRaw());
+                        int audiobits = alac.readbits(alac.getSampleSizeRaw());
                         int bitsmove = 32 - alac.getSampleSizeRaw();
 
                         audiobits = audiobits << bitsmove >> bitsmove;
@@ -625,20 +552,20 @@ class AlacDecodeUtils {
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
-            readbits(alac, 4);
+            alac.readbits(4);
 
-            readbits(alac, 12); // unknown, skip 12 bits
+            alac.readbits(12); // unknown, skip 12 bits
 
-            int hassize = readbits(alac, 1); // the output sample size is stored soon
+            int hassize = alac.readbits(1); // the output sample size is stored soon
 
-            int uncompressed_bytes = readbits(alac, 2); // the number of bytes in the (compressed) stream that are not compressed
+            int uncompressed_bytes = alac.readbits(2); // the number of bytes in the (compressed) stream that are not compressed
 
-            int isnotcompressed = readbits(alac, 1); // whether the frame is compressed
+            int isnotcompressed = alac.readbits(1); // whether the frame is compressed
 
             if (hassize != 0) {
                 /* now read the number of samples,
                  * as a 32bit integer */
-                outputsamples = readbits(alac, 32);
+                outputsamples = alac.readbits(32);
                 outputsize = outputsamples * alac.getBytesPerSample();
             }
 
@@ -651,21 +578,21 @@ class AlacDecodeUtils {
 
                 int[] predictor_coef_table_b = alac.getPredictorCoefTableB();
 
-                interlacing_shift = readbits(alac, 8);
-                interlacing_leftweight = readbits(alac, 8);
+                interlacing_shift = alac.readbits(8);
+                interlacing_leftweight = alac.readbits(8);
 
                 /* ******* channel 1 ***********/
-                int prediction_type_a = readbits(alac, 4);
-                int prediction_quantitization_a = readbits(alac, 4);
+                int prediction_type_a = alac.readbits(4);
+                int prediction_quantitization_a = alac.readbits(4);
 
-                int ricemodifier_a = readbits(alac, 3);
-                int predictor_coef_num_a = readbits(alac, 5);
+                int ricemodifier_a = alac.readbits(3);
+                int predictor_coef_num_a = alac.readbits(5);
 
                 /* read the predictor table */
 
                 int tempPred;
                 for (int i = 0; i < predictor_coef_num_a; i++) {
-                    tempPred = readbits(alac, 16);
+                    tempPred = alac.readbits(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -674,16 +601,16 @@ class AlacDecodeUtils {
                 }
 
                 /* ******* channel 2 *********/
-                int prediction_type_b = readbits(alac, 4);
-                int prediction_quantitization_b = readbits(alac, 4);
+                int prediction_type_b = alac.readbits(4);
+                int prediction_quantitization_b = alac.readbits(4);
 
-                int ricemodifier_b = readbits(alac, 3);
-                int predictor_coef_num_b = readbits(alac, 5);
+                int ricemodifier_b = alac.readbits(3);
+                int predictor_coef_num_b = alac.readbits(5);
 
                 /* read the predictor table */
 
                 for (int i = 0; i < predictor_coef_num_b; i++) {
-                    tempPred = readbits(alac, 16);
+                    tempPred = alac.readbits(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -694,8 +621,8 @@ class AlacDecodeUtils {
                 /* ********************/
                 if (uncompressed_bytes != 0) { // see mono case
                     for (int i = 0; i < outputsamples; i++) {
-                        alac.getUncompressedBytesBufferA()[i] = readbits(alac, uncompressed_bytes * 8);
-                        alac.getUncompressedBytesBufferB()[i] = readbits(alac, uncompressed_bytes * 8);
+                        alac.getUncompressedBytesBufferA()[i] = alac.readbits(uncompressed_bytes * 8);
+                        alac.getUncompressedBytesBufferB()[i] = alac.readbits(uncompressed_bytes * 8);
                     }
                 }
 
@@ -724,8 +651,8 @@ class AlacDecodeUtils {
 
                     for (int i = 0; i < outputsamples; i++) {
 
-                        int audiobits_a = readbits(alac, alac.getSampleSizeRaw());
-                        int audiobits_b = readbits(alac, alac.getSampleSizeRaw());
+                        int audiobits_a = alac.readbits(alac.getSampleSizeRaw());
+                        int audiobits_b = alac.readbits(alac.getSampleSizeRaw());
 
                         int bitsmove = 32 - alac.getSampleSizeRaw();
 
@@ -778,11 +705,11 @@ class AlacDecodeUtils {
     }
 
     private static int getAudiobits(AlacFileData alac) {
-        int audiobits = readbits(alac, 16);
+        int audiobits = alac.readbits(16);
         /* special case of sign extension..
          * as we'll be ORing the low 16bits into this */
         audiobits = audiobits << alac.getSampleSizeRaw() - 16;
-        audiobits = audiobits | readbits(alac, alac.getSampleSizeRaw() - 16);
+        audiobits = audiobits | alac.readbits(alac.getSampleSizeRaw() - 16);
         return audiobits;
     }
 }

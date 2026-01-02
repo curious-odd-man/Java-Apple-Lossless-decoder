@@ -87,4 +87,77 @@ public class AlacFileData {
         ptrIndex += 4;
         eigthARate = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
     }
+
+    /* supports reading 1 to 16 bits, in big endian format */
+    int readbits_16(int bits) {
+        byte[] inputBuffer = getInputBuffer();
+        int ibIdx = getIbIdx();
+        int part1 = inputBuffer[ibIdx] & 0xff;
+        int part2 = inputBuffer[ibIdx + 1] & 0xff;
+        int part3 = inputBuffer[ibIdx + 2] & 0xff;
+
+        int result = part1 << 16 | part2 << 8 | part3;
+
+        /* shift left by the number of bits we've already read,
+         * so that the top 'n' bits of the 24 bits we read will
+         * be the return bits */
+        result = result << getInputBufferBitaccumulator();
+
+        result = result & 0x00ffffff;
+
+        /* and then only want the top 'n' bits from that, where
+         * n is 'bits' */
+        result = result >> 24 - bits;
+
+        int new_accumulator = getInputBufferBitaccumulator() + bits;
+
+        /* increase the buffer pointer if we've read over n bytes. */
+        setIbIdx(getIbIdx() + (new_accumulator >> 3));
+
+        /* and the remainder goes back into the bit accumulator */
+        setInputBufferBitaccumulator(new_accumulator & 7);
+
+        return result;
+    }
+
+    /* supports reading 1 to 32 bits, in big endian format */
+    public int readbits(int bits) {
+        int result = 0;
+
+        if (bits > 16) {
+            bits -= 16;
+
+            result = readbits_16(16) << bits;
+        }
+
+        result |= readbits_16(bits);
+
+        return result;
+    }
+
+    /* reads a single bit */
+    public int readbit() {
+
+        int result = getInputBuffer()[getIbIdx()] & 0xff;
+
+        result = result << getInputBufferBitaccumulator();
+
+        result = result >> 7 & 1;
+
+        int new_accumulator = getInputBufferBitaccumulator() + 1;
+
+        setIbIdx(getIbIdx() + new_accumulator / 8);
+
+        setInputBufferBitaccumulator(new_accumulator % 8);
+
+        return result;
+    }
+
+    public void unreadbits() {
+        int new_accumulator = getInputBufferBitaccumulator() - 1;
+
+        setIbIdx(getIbIdx() + (new_accumulator >> 3));
+
+        setInputBufferBitaccumulator(new_accumulator & 7);
+    }
 }
