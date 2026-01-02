@@ -47,9 +47,7 @@ public class QTMovie {
             if (chunkId == makeFourCC(102, 116, 121, 112)) {  // fourcc equals ftyp
                 readChunkFtyp(chunkLen);
             } else if (chunkId == makeFourCC(109, 111, 111, 118)) {   // fourcc equals moov
-                if (readChunkMoov(chunkLen) == 0) {
-                    throw new IllegalStateException("Failed to read moov");
-                }
+                readChunkMoov(chunkLen);
                 if (foundMdat) {
                     return setSavedMdat();
                 }
@@ -432,71 +430,51 @@ public class QTMovie {
     }
 
     /* 'mvhd' movie header atom */
-    void read_chunk_mvhd(int chunk_len) throws IOException {
+    void readChunkMvhd(int chunkLen) throws IOException {
         /* don't need anything from here atm, skip */
-        readChunkEdts(chunk_len);
+        skipChunkMinus8(chunkLen);
     }
 
     /* 'udta' user data.. contains tag info */
-    void read_chunk_udta(int chunk_len) throws IOException {
+    void readChunkUdta(int chunkLen) throws IOException {
         /* don't need anything from here atm, skip */
-        readChunkEdts(chunk_len);
+        skipChunkMinus8(chunkLen);
     }
 
     /* 'iods' */
-    void read_chunk_iods(int chunk_len) throws IOException {
+    void readChunkIods(int chunkLen) throws IOException {
         /* don't need anything from here atm, skip */
-        readChunkEdts(chunk_len);
+        skipChunkMinus8(chunkLen);
     }
 
     /* 'moov' movie atom - contains other atoms */
-    int readChunkMoov(int chunk_len) throws IOException {
-        int size_remaining = chunk_len - 8; // FIXME WRONG
-
-        while (size_remaining != 0) {
-            int sub_chunk_len;
-
-            try {
-                sub_chunk_len = qtstream.readUint32();
-            } catch (Exception e) {
-                System.err.println("(read_chunk_moov) error reading sub_chunk_len - possibly number too large");
-                sub_chunk_len = 0;
+    void readChunkMoov(int chunkLen) throws IOException {
+        int sizeRemaining = chunkLen - 8; // FIXME WRONG
+        while (sizeRemaining != 0) {
+            int subChunkLen = qtstream.readUint32();
+            if (subChunkLen <= 1 || subChunkLen > sizeRemaining) {
+                throw new UnsupportedFormatException("strange size for chunk inside moov");
             }
 
-            if (sub_chunk_len <= 1 || sub_chunk_len > size_remaining) {
-                System.err.println("strange size for chunk inside moov");
-                return 0;
-            }
-
-            int sub_chunk_id = qtstream.readUint32();
-
-            if (sub_chunk_id == makeFourCC(109, 118, 104, 100))    // fourcc equals mvhd
-            {
-                read_chunk_mvhd(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(116, 114, 97, 107))    // fourcc equals trak
-            {
-                readChunkTrak(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(117, 100, 116, 97))    // fourcc equals udta
-            {
-                read_chunk_udta(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(101, 108, 115, 116))    // fourcc equals elst
-            {
-                readChunkElst(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(105, 111, 100, 115))    // fourcc equals iods
-            {
-                read_chunk_iods(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(102, 114, 101, 101))     // fourcc equals free
-            {
-                qtstream.skip(sub_chunk_len - 8); // FIXME not 8
+            int subChunkId = qtstream.readUint32();
+            if (subChunkId == makeFourCC(109, 118, 104, 100)) {  // fourcc equals mvhd
+                readChunkMvhd(subChunkLen);
+            } else if (subChunkId == makeFourCC(116, 114, 97, 107)) { // fourcc equals trak
+                readChunkTrak(subChunkLen);
+            } else if (subChunkId == makeFourCC(117, 100, 116, 97)) {   // fourcc equals udta
+                readChunkUdta(subChunkLen);
+            } else if (subChunkId == makeFourCC(101, 108, 115, 116)) {   // fourcc equals elst
+                readChunkElst(subChunkLen);
+            } else if (subChunkId == makeFourCC(105, 111, 100, 115)) { // fourcc equals iods
+                readChunkIods(subChunkLen);
+            } else if (subChunkId == makeFourCC(102, 114, 101, 101)) {  // fourcc equals free
+                qtstream.skip(subChunkLen - 8); // FIXME not 8
             } else {
-                System.err.println("(moov) unknown chunk id: " + splitFourCC(sub_chunk_id));
-                return 0;
+                throw new UnsupportedFormatException("(moov) unknown chunk id: " + splitFourCC(subChunkId));
             }
 
-            size_remaining -= sub_chunk_len;
+            sizeRemaining -= subChunkLen;
         }
-
-        return 1;
     }
 
     void readChunkMdat(int chunk_len, boolean skipMdat) throws IOException {
