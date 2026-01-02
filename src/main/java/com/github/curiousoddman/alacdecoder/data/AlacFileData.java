@@ -42,7 +42,7 @@ public class AlacFileData {
     private int eigthARate = 0; // 0x0000ac44
 
     private byte[] inputBuffer;
-    public int ibIdx = 0;
+    private int ibIdx = 0;
     private int inputBufferBitaccumulator = 0; /* used so we can do arbitary
 						bit reads */
     private final LeadingZeros lz = new LeadingZeros();
