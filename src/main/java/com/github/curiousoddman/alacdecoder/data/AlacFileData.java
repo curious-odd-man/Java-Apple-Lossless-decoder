@@ -244,95 +244,86 @@ public class AlacFileData {
         }
     }
 
-
-    public int decodeFrame(byte[] inbuffer, int[] outbuffer) {
-        int outputsamples = getMaxSamplesPerFrame();
+    public int decodeFrame(byte[] inBuffer, int[] outBuffer) {
+        int outputSamples = maxSamplesPerFrame;
 
         /* setup the stream */
-        setInputBuffer(inbuffer);
-        setInputBufferBitAccumulator(0);
-        setIbIdx(0);
+        inputBuffer = inBuffer;
+        inputBufferBitAccumulator = 0;
+        ibIdx = 0;
 
         int channels = readbits(3);
+        int outputSize = outputSamples * getBytesPerSample();
 
-        int outputsize = outputsamples * getBytesPerSample();
-
-        if (channels == 0) // 1 channel
-        {
+        if (channels == 0) {// 1 channel
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
             readbits(4);
-
             readbits(12); // unknown, skip 12 bits
 
-            int hassize = readbits(1); // the output sample size is stored soon
+            int hasSize = readbits(1); // the output sample size is stored soon
+            int uncompressedBytes = readbits(2); // number of bytes in the (compressed) stream that are not compressed
+            int isNotCompressed = readbits(1); // whether the frame is compressed
 
-            int uncompressed_bytes = readbits(2); // number of bytes in the (compressed) stream that are not compressed
-
-            int isnotcompressed = readbits(1); // whether the frame is compressed
-
-            if (hassize != 0) {
+            if (hasSize != 0) {
                 /* now read the number of samples,
                  * as a 32bit integer */
-                outputsamples = readbits(32);
-                outputsize = outputsamples * getBytesPerSample();
+                outputSamples = readbits(32);
+                outputSize = outputSamples * getBytesPerSample();
             }
 
-            int readsamplesize = getSampleSizeRaw() - uncompressed_bytes * 8;
+            int readSampleSize = getSampleSizeRaw() - uncompressedBytes * 8;
 
-            if (isnotcompressed == 0) { // so it is compressed
-                int[] predictor_coef_table = getPredictorCoefTable();
-
+            if (isNotCompressed == 0) { // so it is compressed
                 /* skip 16 bits, not sure what they are. seem to be used in
                  * two channel case */
                 readbits(8);
                 readbits(8);
 
-                int prediction_type = readbits(4);
-                int prediction_quantitization = readbits(4);
+                int predictionType = readbits(4);
+                int predictionQuantitization = readbits(4);
 
-                int ricemodifier = readbits(3);
-                int predictor_coef_num = readbits(5);
+                int riceModifier = readbits(3);
+                int predictorCoefNum = readbits(5);
 
                 /* read the predictor table */
 
                 int i;
-                for (i = 0; i < predictor_coef_num; i++) {
+                for (i = 0; i < predictorCoefNum; i++) {
                     int tempPred = readbits(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
                     }
 
-                    predictor_coef_table[i] = tempPred;
+                    predictorCoefTable[i] = tempPred;
                 }
 
-                if (uncompressed_bytes != 0) {
-                    for (i = 0; i < outputsamples; i++) {
-                        getUncompressedBytesBufferA()[i] = readbits(uncompressed_bytes * 8);
+                if (uncompressedBytes != 0) {
+                    for (i = 0; i < outputSamples; i++) {
+                        getUncompressedBytesBufferA()[i] = readbits(uncompressedBytes * 8);
                     }
                 }
 
+                entropyRiceDecode(getPredictErrorBufferA(), outputSamples, readSampleSize, riceModifier * (getRiceHistorymult() / 4));
 
-                entropyRiceDecode(getPredictErrorBufferA(), outputsamples, readsamplesize, ricemodifier * (getRiceHistorymult() / 4));
-
-                if (prediction_type == 0) { // adaptive fir
-                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization));
+                if (predictionType == 0) { // adaptive fir
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantitization));
                 } else {
-                    System.err.println("FIXME: unhandled predicition type: " + prediction_type);
+                    System.err.println("FIXME: unhandled predicition type: " + predictionType);
 
                     /* i think the only other prediction type (or perhaps this is just a
                      * boolean?) runs adaptive fir twice.. like:
                      * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
-                     * predictor_decompress_fir_adapt(predictor_error, outputsamples ...)
+                     * predictor_decompress_fir_adapt(predictor_error, outputSamples ...)
                      * little strange..
                      */
                 }
 
             } else { // not compressed, easy case
                 if (getSampleSizeRaw() <= 16) {
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
                         int audiobits = readbits(getSampleSizeRaw());
                         int bitsmove = 32 - getSampleSizeRaw();
 
@@ -342,7 +333,7 @@ public class AlacFileData {
                     }
                 } else {
                     int m = 1 << 24 - 1;
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
 
                         int audiobits = getAudiobits();
                         int x = audiobits & (1 << 24) - 1;
@@ -351,15 +342,15 @@ public class AlacFileData {
                         getOutputSamplesBufferA()[i] = audiobits;
                     }
                 }
-                uncompressed_bytes = 0; // always 0 for uncompressed
+                uncompressedBytes = 0; // always 0 for uncompressed
             }
 
             switch (getSampleSizeRaw()) {
                 case 16: {
 
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
                         int sample = getOutputSamplesBufferA()[i];
-                        outbuffer[i * getNumChannels()] = sample;
+                        outBuffer[i * getNumChannels()] = sample;
 
                         /*
                          ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
@@ -367,23 +358,23 @@ public class AlacFileData {
                          ** will be overwritten in the next iteration
                          */
 
-                        outbuffer[i * getNumChannels() + 1] = 0;
+                        outBuffer[i * getNumChannels() + 1] = 0;
                     }
                     break;
                 }
                 case 24: {
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
                         int sample = getOutputSamplesBufferA()[i];
 
-                        if (uncompressed_bytes != 0) {
-                            sample = sample << uncompressed_bytes * 8;
-                            int mask = ~(0xFFFFFFFF << uncompressed_bytes * 8);
+                        if (uncompressedBytes != 0) {
+                            sample = sample << uncompressedBytes * 8;
+                            int mask = ~(0xFFFFFFFF << uncompressedBytes * 8);
                             sample = sample | getUncompressedBytesBufferA()[i] & mask;
                         }
 
-                        outbuffer[i * getNumChannels() * 3] = sample & 0xFF;
-                        outbuffer[i * getNumChannels() * 3 + 1] = sample >> 8 & 0xFF;
-                        outbuffer[i * getNumChannels() * 3 + 2] = sample >> 16 & 0xFF;
+                        outBuffer[i * getNumChannels() * 3] = sample & 0xFF;
+                        outBuffer[i * getNumChannels() * 3 + 1] = sample >> 8 & 0xFF;
+                        outBuffer[i * getNumChannels() * 3 + 2] = sample >> 16 & 0xFF;
 
                         /*
                          ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
@@ -391,9 +382,9 @@ public class AlacFileData {
                          ** will be overwritten in the next iteration
                          */
 
-                        outbuffer[i * getNumChannels() * 3 + 3] = 0;
-                        outbuffer[i * getNumChannels() * 3 + 4] = 0;
-                        outbuffer[i * getNumChannels() * 3 + 5] = 0;
+                        outBuffer[i * getNumChannels() * 3 + 3] = 0;
+                        outBuffer[i * getNumChannels() * 3 + 4] = 0;
+                        outBuffer[i * getNumChannels() * 3 + 5] = 0;
 
                     }
                     break;
@@ -423,8 +414,8 @@ public class AlacFileData {
             if (hassize != 0) {
                 /* now read the number of samples,
                  * as a 32bit integer */
-                outputsamples = readbits(32);
-                outputsize = outputsamples * getBytesPerSample();
+                outputSamples = readbits(32);
+                outputSize = outputSamples * getBytesPerSample();
             }
 
             int readsamplesize = getSampleSizeRaw() - uncompressed_bytes * 8 + 1;
@@ -478,7 +469,7 @@ public class AlacFileData {
 
                 /* ********************/
                 if (uncompressed_bytes != 0) { // see mono case
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
                         getUncompressedBytesBufferA()[i] = readbits(uncompressed_bytes * 8);
                         getUncompressedBytesBufferB()[i] = readbits(uncompressed_bytes * 8);
                     }
@@ -486,28 +477,28 @@ public class AlacFileData {
 
                 /* channel 1 */
 
-                entropyRiceDecode(getPredictErrorBufferA(), outputsamples, readsamplesize, ricemodifier_a * (getRiceHistorymult() / 4));
+                entropyRiceDecode(getPredictErrorBufferA(), outputSamples, readsamplesize, ricemodifier_a * (getRiceHistorymult() / 4));
 
                 if (prediction_type_a == 0) { // adaptive fir
 
-                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a));
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputSamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a));
 
                 } else { // see mono case
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
                 }
 
                 /* channel 2 */
-                entropyRiceDecode(getPredictErrorBufferB(), outputsamples, readsamplesize, ricemodifier_b * (getRiceHistorymult() / 4));
+                entropyRiceDecode(getPredictErrorBufferB(), outputSamples, readsamplesize, ricemodifier_b * (getRiceHistorymult() / 4));
 
                 if (prediction_type_b == 0) { // adaptive fir
-                    setOutputSamplesBufferB(predictorDecompressFirAdapt(getPredictErrorBufferB(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));
+                    setOutputSamplesBufferB(predictorDecompressFirAdapt(getPredictErrorBufferB(), outputSamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));
                 } else {
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_b);
                 }
             } else { // not compressed, easy case
                 if (getSampleSizeRaw() <= 16) {
 
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
 
                         int audiobits_a = readbits(getSampleSizeRaw());
                         int audiobits_b = readbits(getSampleSizeRaw());
@@ -523,7 +514,7 @@ public class AlacFileData {
                 } else {
                     int m = 1 << 24 - 1;
 
-                    for (int i = 0; i < outputsamples; i++) {
+                    for (int i = 0; i < outputSamples; i++) {
 
                         int audiobits_a = getAudiobits();
                         int x = audiobits_a & (1 << 24) - 1;
@@ -544,11 +535,11 @@ public class AlacFileData {
 
             switch (getSampleSizeRaw()) {
                 case 16: {
-                    deinterlace16(getOutputSamplesBufferA(), getOutputSamplesBufferB(), outbuffer, getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace16(getOutputSamplesBufferA(), getOutputSamplesBufferB(), outBuffer, getNumChannels(), outputSamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 24: {
-                    deinterlace24(getOutputSamplesBufferA(), getOutputSamplesBufferB(), uncompressed_bytes, getUncompressedBytesBufferA(), getUncompressedBytesBufferB(), outbuffer, getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace24(getOutputSamplesBufferA(), getOutputSamplesBufferB(), uncompressed_bytes, getUncompressedBytesBufferA(), getUncompressedBytesBufferB(), outBuffer, getNumChannels(), outputSamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 20:
@@ -559,7 +550,7 @@ public class AlacFileData {
 
             }
         }
-        return outputsize;
+        return outputSize;
     }
 
     private int getAudiobits() {
