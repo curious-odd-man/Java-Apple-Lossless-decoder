@@ -18,38 +18,17 @@ import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import java.io.IOException;
 
 class DemuxUtils {
-    public static int MakeFourCC(int ch0, int ch1, int ch2, int ch3) {
+    public static int makeFourCC(int ch0, int ch1, int ch2, int ch3) {
         return (((ch0) << 24) | ((ch1) << 16) | ((ch2) << 8) | ((ch3)));
     }
 
-    public static int MakeFourCC32(int ch0, int ch1, int ch2, int ch3) {
-        int tmp = ch0;
-
-        int retval = tmp << 24;
-
-        tmp = ch1;
-
-        retval = retval | (tmp << 16);
-        tmp = ch2;
-
-        retval = retval | (tmp << 8);
-        tmp = ch3;
-
-        retval = retval | tmp;
-
-        return (retval);
-    }
-
-    public static String SplitFourCC(int code) {
-
+    public static String splitFourCC(int code) {
         char c1 = (char) ((code >> 24) & 0xFF);
         char c2 = (char) ((code >> 16) & 0xFF);
         char c3 = (char) ((code >> 8) & 0xFF);
         char c4 = (char) (code & 0xFF);
-        String retstr = c1 + " " + c2 + " " + c3 + " " + c4;
 
-        return retstr;
-
+        return c1 + " " + c2 + " " + c3 + " " + c4;
     }
 
 
@@ -83,10 +62,10 @@ class DemuxUtils {
             }
             int chunk_id = qtmovie.getQtstream().readUint32();
 
-            if (chunk_id == MakeFourCC32(102, 116, 121, 112))    // fourcc equals ftyp
+            if (chunk_id == makeFourCC(102, 116, 121, 112))    // fourcc equals ftyp
             {
                 read_chunk_ftyp(qtmovie, chunk_len);
-            } else if (chunk_id == MakeFourCC32(109, 111, 111, 118))    // fourcc equals moov
+            } else if (chunk_id == makeFourCC(109, 111, 111, 118))    // fourcc equals moov
             {
                 if (read_chunk_moov(qtmovie, chunk_len) == 0)
                     return 0; // failed to read moov, can't do anything
@@ -99,7 +78,7 @@ class DemuxUtils {
              * and move on. We can then come back to mdat later.
              * This presumes the stream supports seeking backwards.
              */
-            else if (chunk_id == MakeFourCC32(109, 100, 97, 116))    // fourcc equals mdat
+            else if (chunk_id == makeFourCC(109, 100, 97, 116))    // fourcc equals mdat
             {
                 int not_found_moov = 0;
                 if (found_moov == 0)
@@ -111,14 +90,14 @@ class DemuxUtils {
                 found_mdat = 1;
             }
             /*  these following atoms can be skipped !!!! */
-            else if (chunk_id == MakeFourCC32(102, 114, 101, 101))    // fourcc equals free
+            else if (chunk_id == makeFourCC(102, 114, 101, 101))    // fourcc equals free
             {
                 qtmovie.getQtstream().skip(chunk_len - 8); // FIXME not 8
-            } else if (chunk_id == MakeFourCC32(106, 117, 110, 107))     // fourcc equals junk
+            } else if (chunk_id == makeFourCC(106, 117, 110, 107))     // fourcc equals junk
             {
                 qtmovie.getQtstream().skip(chunk_len - 8); // FIXME not 8
             } else {
-                System.err.println("(top) unknown chunk id: " + SplitFourCC(chunk_id));
+                System.err.println("(top) unknown chunk id: " + splitFourCC(chunk_id));
                 return 0;
             }
         }
@@ -132,7 +111,7 @@ class DemuxUtils {
         int type = qtmovie.getQtstream().readUint32();
         size_remaining -= 4;
 
-        if (type != MakeFourCC32(77, 52, 65, 32))        // "M4A " ascii values
+        if (type != makeFourCC(77, 52, 65, 32))        // "M4A " ascii values
         {
             System.err.println("not M4A file");
             return;
@@ -242,9 +221,9 @@ class DemuxUtils {
             int entry_remaining = entry_size;
             entry_remaining -= 8;
 
-            if (qtmovie.getRes().getFormat() != MakeFourCC32(97, 108, 97, 99))    // "alac" ascii values
+            if (qtmovie.getRes().getFormat() != makeFourCC(97, 108, 97, 99))    // "alac" ascii values
             {
-                System.err.println("(read_chunk_stsd) error reading description atom - expecting alac, got " + SplitFourCC(qtmovie.getRes().getFormat()));
+                System.err.println("(read_chunk_stsd) error reading description atom - expecting alac, got " + splitFourCC(qtmovie.getRes().getFormat()));
                 return 0;
             }
 
@@ -299,8 +278,8 @@ class DemuxUtils {
 
             /* audio format atom */
             qtmovie.getRes().getCodecData()[0] = 0x0c000000;
-            qtmovie.getRes().getCodecData()[1] = MakeFourCC(97, 109, 114, 102);        // "amrf" ascii values
-            qtmovie.getRes().getCodecData()[2] = MakeFourCC(99, 97, 108, 97);        // "cala" ascii values
+            qtmovie.getRes().getCodecData()[1] = makeFourCC(97, 109, 114, 102);        // "amrf" ascii values
+            qtmovie.getRes().getCodecData()[2] = makeFourCC(99, 97, 108, 97);        // "cala" ascii values
 
             qtmovie.getQtstream().read(entry_remaining, qtmovie.getRes().getCodecData(), 12);    // codecdata buffer should be +12
             entry_remaining -= entry_remaining;
@@ -337,7 +316,7 @@ class DemuxUtils {
                 qtmovie.getQtstream().skip(entry_remaining);
 
             qtmovie.getRes().setFormatRead(1);
-            if (qtmovie.getRes().getFormat() != MakeFourCC32(97, 108, 97, 99))        // "alac" ascii values
+            if (qtmovie.getRes().getFormat() != makeFourCC(97, 108, 97, 99))        // "alac" ascii values
             {
                 return 0;
             }
@@ -458,24 +437,24 @@ class DemuxUtils {
 
             int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
-            if (sub_chunk_id == MakeFourCC32(115, 116, 115, 100))    // fourcc equals stsd
+            if (sub_chunk_id == makeFourCC(115, 116, 115, 100))    // fourcc equals stsd
             {
                 if (read_chunk_stsd(qtmovie) == 0)
                     return 0;
-            } else if (sub_chunk_id == MakeFourCC32(115, 116, 116, 115))    // fourcc equals stts
+            } else if (sub_chunk_id == makeFourCC(115, 116, 116, 115))    // fourcc equals stts
             {
                 read_chunk_stts(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(115, 116, 115, 122))    // fourcc equals stsz
+            } else if (sub_chunk_id == makeFourCC(115, 116, 115, 122))    // fourcc equals stsz
             {
                 read_chunk_stsz(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(115, 116, 115, 99))    // fourcc equals stsc
+            } else if (sub_chunk_id == makeFourCC(115, 116, 115, 99))    // fourcc equals stsc
             {
                 read_chunk_stsc(qtmovie);
-            } else if (sub_chunk_id == MakeFourCC32(115, 116, 99, 111))    // fourcc equals stco
+            } else if (sub_chunk_id == makeFourCC(115, 116, 99, 111))    // fourcc equals stco
             {
                 read_chunk_stco(qtmovie);
             } else {
-                System.err.println("(stbl) unknown chunk id: " + SplitFourCC(sub_chunk_id));
+                System.err.println("(stbl) unknown chunk id: " + splitFourCC(sub_chunk_id));
                 return 0;
             }
 
@@ -536,7 +515,7 @@ class DemuxUtils {
             System.err.println("unexpected size in media info\n");
             return 0;
         }
-        if (qtmovie.getQtstream().readUint32() != MakeFourCC32(115, 109, 104, 100))    // "smhd" ascii values
+        if (qtmovie.getQtstream().readUint32() != makeFourCC(115, 109, 104, 100))    // "smhd" ascii values
         {
             System.err.println("not a sound header! can't handle this.");
             return 0;
@@ -558,7 +537,7 @@ class DemuxUtils {
             dinf_size = 0;
         }
 
-        if (qtmovie.getQtstream().readUint32() != MakeFourCC32(100, 105, 110, 102))    // "dinf" ascii values
+        if (qtmovie.getQtstream().readUint32() != makeFourCC(100, 105, 110, 102))    // "dinf" ascii values
         {
             System.err.println("expected dinf, didn't get it.");
             return 0;
@@ -578,7 +557,7 @@ class DemuxUtils {
             stbl_size = 0;
         }
 
-        if (qtmovie.getQtstream().readUint32() != MakeFourCC32(115, 116, 98, 108))    // "stbl" ascii values
+        if (qtmovie.getQtstream().readUint32() != makeFourCC(115, 116, 98, 108))    // "stbl" ascii values
         {
             System.err.println("expected stbl, didn't get it.");
             return 0;
@@ -615,18 +594,18 @@ class DemuxUtils {
 
             int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
-            if (sub_chunk_id == MakeFourCC32(109, 100, 104, 100))    // fourcc equals mdhd
+            if (sub_chunk_id == makeFourCC(109, 100, 104, 100))    // fourcc equals mdhd
             {
                 read_chunk_mdhd(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(104, 100, 108, 114))    // fourcc equals hdlr
+            } else if (sub_chunk_id == makeFourCC(104, 100, 108, 114))    // fourcc equals hdlr
             {
                 read_chunk_hdlr(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(109, 105, 110, 102))    // fourcc equals minf
+            } else if (sub_chunk_id == makeFourCC(109, 105, 110, 102))    // fourcc equals minf
             {
                 if (read_chunk_minf(qtmovie, sub_chunk_len) == 0)
                     return 0;
             } else {
-                System.err.println("(mdia) unknown chunk id: " + SplitFourCC(sub_chunk_id));
+                System.err.println("(mdia) unknown chunk id: " + splitFourCC(sub_chunk_id));
                 return 0;
             }
 
@@ -657,18 +636,18 @@ class DemuxUtils {
 
             int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
-            if (sub_chunk_id == MakeFourCC32(116, 107, 104, 100))    // fourcc equals tkhd
+            if (sub_chunk_id == makeFourCC(116, 107, 104, 100))    // fourcc equals tkhd
             {
                 read_chunk_tkhd(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(109, 100, 105, 97))    // fourcc equals mdia
+            } else if (sub_chunk_id == makeFourCC(109, 100, 105, 97))    // fourcc equals mdia
             {
                 if (read_chunk_mdia(qtmovie, sub_chunk_len) == 0)
                     return 0;
-            } else if (sub_chunk_id == MakeFourCC32(101, 100, 116, 115))    // fourcc equals edts
+            } else if (sub_chunk_id == makeFourCC(101, 100, 116, 115))    // fourcc equals edts
             {
                 read_chunk_edts(qtmovie, sub_chunk_len);
             } else {
-                System.err.println("(trak) unknown chunk id: " + SplitFourCC(sub_chunk_id));
+                System.err.println("(trak) unknown chunk id: " + splitFourCC(sub_chunk_id));
                 return 0;
             }
 
@@ -717,27 +696,27 @@ class DemuxUtils {
 
             int sub_chunk_id = qtmovie.getQtstream().readUint32();
 
-            if (sub_chunk_id == MakeFourCC32(109, 118, 104, 100))    // fourcc equals mvhd
+            if (sub_chunk_id == makeFourCC(109, 118, 104, 100))    // fourcc equals mvhd
             {
                 read_chunk_mvhd(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(116, 114, 97, 107))    // fourcc equals trak
+            } else if (sub_chunk_id == makeFourCC(116, 114, 97, 107))    // fourcc equals trak
             {
                 if (read_chunk_trak(qtmovie, sub_chunk_len) == 0)
                     return 0;
-            } else if (sub_chunk_id == MakeFourCC32(117, 100, 116, 97))    // fourcc equals udta
+            } else if (sub_chunk_id == makeFourCC(117, 100, 116, 97))    // fourcc equals udta
             {
                 read_chunk_udta(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(101, 108, 115, 116))    // fourcc equals elst
+            } else if (sub_chunk_id == makeFourCC(101, 108, 115, 116))    // fourcc equals elst
             {
                 read_chunk_elst(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(105, 111, 100, 115))    // fourcc equals iods
+            } else if (sub_chunk_id == makeFourCC(105, 111, 100, 115))    // fourcc equals iods
             {
                 read_chunk_iods(qtmovie, sub_chunk_len);
-            } else if (sub_chunk_id == MakeFourCC32(102, 114, 101, 101))     // fourcc equals free
+            } else if (sub_chunk_id == makeFourCC(102, 114, 101, 101))     // fourcc equals free
             {
                 qtmovie.getQtstream().skip(sub_chunk_len - 8); // FIXME not 8
             } else {
-                System.err.println("(moov) unknown chunk id: " + SplitFourCC(sub_chunk_id));
+                System.err.println("(moov) unknown chunk id: " + splitFourCC(sub_chunk_id));
                 return 0;
             }
 
