@@ -3,6 +3,8 @@ package com.github.curiousoddman.alacdecoder;
 
 import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
+import com.github.curiousoddman.alacdecoder.stream.QTMovie;
+import com.github.curiousoddman.alacdecoder.utils.UnsupportedFormatException;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -10,7 +12,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static com.github.curiousoddman.alacdecoder.DemuxUtils.makeFourCC;
+import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.makeFourCC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;

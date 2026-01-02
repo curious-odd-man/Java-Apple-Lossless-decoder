@@ -9,24 +9,30 @@
  **
  */
 
-import com.github.curiousoddman.alacdecoder.AlacContext;
-import com.github.curiousoddman.alacdecoder.AlacUtils;
-import com.github.curiousoddman.alacdecoder.WavWriter;
+import com.github.curiousoddman.alacdecoder.data.AlacContext;
+import com.github.curiousoddman.alacdecoder.data.WavFormat;
+import com.github.curiousoddman.alacdecoder.utils.AlacUtils;
+import com.github.curiousoddman.alacdecoder.utils.WavUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static com.github.curiousoddman.alacdecoder.utils.SamplingUtils.formatSamples;
 
 public class DecoderDemo {
-    enum WavFormat {
-        RAW_PCM,
-        NORMAL
-    }
-
     public static void main(String[] args) throws IOException {
         Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
 
         try (FileOutputStream fileOutputStream = new FileOutputStream(config.outputFileName());
-             AlacContext ac = AlacUtils.openFile(config.inputFileName())) {
+             AlacContext ac = AlacUtils.createContext(() -> {
+                 try {
+                     return Files.newInputStream(Path.of(config.inputFileName()));
+                 } catch (IOException e) {
+                     throw new RuntimeException(e);
+                 }
+             })) {
 
             int numChannels = ac.getNumChannels();
             System.out.println("The Apple Lossless file has " + numChannels + " channels");
@@ -40,7 +46,7 @@ public class DecoderDemo {
 
             /* write wav output headers */
             if (config.wavFormat() == WavFormat.RAW_PCM) {
-                WavWriter.writeHeaders(fileOutputStream, totalSamples * bytesPerSample * numChannels, numChannels, sampleRate, bytesPerSample, bitsPerSample);
+                WavUtils.writeHeaders(fileOutputStream, totalSamples * bytesPerSample * numChannels, numChannels, sampleRate, bytesPerSample, bitsPerSample);
             }
 
             /* will convert the entire buffer */
@@ -49,47 +55,6 @@ public class DecoderDemo {
     }
 
     private record Config(WavFormat wavFormat, String inputFileName, String outputFileName) {
-    }
-
-    // Reformat samples from longs in processor's native endian mode to
-    // little-endian data with (possibly) less than 3 bytes / sample.
-    public static byte[] formatSamples(int bps, int[] src, int samcnt) {
-        int counter = 0;
-        int counter2 = 0;
-        byte[] dst = new byte[65536];
-
-        switch (bps) {
-            case 1:
-                while (samcnt > 0) {
-                    dst[counter] = (byte) (0x00FF & src[counter] + 128);
-                    counter++;
-                    samcnt--;
-                }
-                break;
-
-            case 2:
-                while (samcnt > 0) {
-                    int temp = src[counter2];
-                    dst[counter] = (byte) temp;
-                    counter++;
-                    dst[counter] = (byte) (temp >>> 8);
-                    counter++;
-                    counter2++;
-                    samcnt = samcnt - 2;
-                }
-                break;
-
-            case 3:
-                while (samcnt > 0) {
-                    dst[counter] = (byte) src[counter2];
-                    counter++;
-                    counter2++;
-                    samcnt--;
-                }
-                break;
-        }
-
-        return dst;
     }
 
     private static Config readCmdArgs(int argc, String[] argv) {
@@ -147,7 +112,6 @@ public class DecoderDemo {
         } while (bytesUnpacked != 0);
     }
 
-
     static void printUsageAndSystemExit() {
         System.out.println("Usage: alac [options] inputfile outputfile");
         System.out.println("Decompresses the ALAC file specified");
@@ -159,7 +123,5 @@ public class DecoderDemo {
         System.out.println("Original software is (c) 2005 David Hammerton");
         System.exit(1);
     }
-
-
 }
 

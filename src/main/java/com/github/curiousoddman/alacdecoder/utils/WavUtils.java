@@ -8,12 +8,15 @@
  ** Distributed under the BSD Software License (see license.txt)
  **
  */
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.utils;
+
+import lombok.experimental.UtilityClass;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class WavWriter {
+@UtilityClass
+public class WavUtils {
     public static void writeHeaders(OutputStream os,
                                     int dataSize,
                                     int numChannels,
@@ -55,13 +58,13 @@ public class WavWriter {
         writeUint32(os, dataSize);
     }
 
-    static void writeUint32(OutputStream f, int v) throws IOException {
+    public static void writeUint32(OutputStream f, int v) throws IOException {
         writeUint16(f, v);
         f.write((byte) (v >>> 16));
         f.write((byte) (v >>> 24));
     }
 
-    static void writeUint16(OutputStream f, int v) throws IOException {
+    public static void writeUint16(OutputStream f, int v) throws IOException {
         f.write((byte) v);
         f.write((byte) (v >>> 8));
     }

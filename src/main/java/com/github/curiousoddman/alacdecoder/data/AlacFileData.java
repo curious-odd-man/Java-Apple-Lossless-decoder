@@ -13,7 +13,7 @@ package com.github.curiousoddman.alacdecoder.data;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.github.curiousoddman.alacdecoder.AlacDecodeUtils.*;
+import static com.github.curiousoddman.alacdecoder.utils.AlacDecodeUtils.*;
 
 @Data
 @Slf4j

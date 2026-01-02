@@ -8,7 +8,7 @@
  ** Distributed under the BSD Software License (see license.txt)
  **
  */
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.utils;
 
 public class AlacDecodeUtils {
     public static int countLeadingZerosExtra(int curbyte, int output) {

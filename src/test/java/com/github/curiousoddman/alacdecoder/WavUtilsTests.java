@@ -1,5 +1,6 @@
 package com.github.curiousoddman.alacdecoder;
 
+import com.github.curiousoddman.alacdecoder.utils.WavUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -8,7 +9,7 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class WavWriterTests {
+public class WavUtilsTests {
 
     // Helper method to get the written bytes as an array
     private byte[] getBytesWritten(ByteArrayOutputStream baos) {
@@ -18,7 +19,7 @@ public class WavWriterTests {
     @Test
     public void testWriteUint32_WritesCorrectBytes() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        WavWriter.writeUint32(baos, 0x12345678);
+        WavUtils.writeUint32(baos, 0x12345678);
         byte[] result = getBytesWritten(baos);
         byte[] expected = {(byte) 0x78, (byte) 0x56, (byte) 0x34, (byte) 0x12};
         assertArrayEquals(expected, result, "write_uint32 should write bytes in little endian order");
@@ -27,7 +28,7 @@ public class WavWriterTests {
     @Test
     public void testWriteUint16_WritesCorrectBytes() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        WavWriter.writeUint16(baos, 0x1234);
+        WavUtils.writeUint16(baos, 0x1234);
         byte[] result = getBytesWritten(baos);
         byte[] expected = {(byte) 0x34, (byte) 0x12};
         assertArrayEquals(expected, result, "write_uint16 should write bytes in little endian order");
@@ -44,7 +45,7 @@ public class WavWriterTests {
         int bitspersample = 16;
 
         // Call the method
-        WavWriter.writeHeaders(baos, datasize, numchannels, samplerate, bytespersample, bitspersample);
+        WavUtils.writeHeaders(baos, datasize, numchannels, samplerate, bytespersample, bitspersample);
 
         byte[] outputBytes = getBytesWritten(baos);
 

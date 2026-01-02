@@ -9,11 +9,13 @@
  **
  */
 
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.stream;
 
+import com.github.curiousoddman.alacdecoder.data.DemuxRes;
+import com.github.curiousoddman.alacdecoder.data.MdatStatus;
 import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
 import com.github.curiousoddman.alacdecoder.data.SampleInfo;
-import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
+import com.github.curiousoddman.alacdecoder.utils.UnsupportedFormatException;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static com.github.curiousoddman.alacdecoder.DemuxUtils.makeFourCC;
-import static com.github.curiousoddman.alacdecoder.DemuxUtils.splitFourCC;
+import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.makeFourCC;
+import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.splitFourCC;
 
 @Data
 @Slf4j
@@ -93,7 +95,7 @@ public class QTMovie {
     }
 
     /* chunk handlers */
-    void readChunkFtyp(int chunkLen) throws IOException {
+    public void readChunkFtyp(int chunkLen) throws IOException {
         int sizeRemaining = chunkLen - 8; // FIXME: can't hardcode 8, size may be 64bit
 
         int type = qtstream.readUint32();
@@ -126,7 +128,7 @@ public class QTMovie {
     }
 
     /* media handler inside mdia */
-    void readChunkHandler(int chunkLen) throws IOException {
+    public void readChunkHandler(int chunkLen) throws IOException {
         skipChunkMinus8(chunkLen);
     }
 

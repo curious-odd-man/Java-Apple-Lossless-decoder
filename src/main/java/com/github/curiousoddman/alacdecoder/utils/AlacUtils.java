@@ -8,26 +8,28 @@
  ** Distributed under the BSD Software License (see license.txt)
  **
  */
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.utils;
 
+import com.github.curiousoddman.alacdecoder.data.AlacContext;
 import com.github.curiousoddman.alacdecoder.data.AlacFileData;
+import com.github.curiousoddman.alacdecoder.data.DemuxRes;
 import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
+import com.github.curiousoddman.alacdecoder.stream.QTMovie;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.function.Supplier;
 
 public class AlacUtils {
     // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
     public static final int DEST_BUFFER_SIZE = 1024 * 24 * 3;
 
-    public static AlacContext openFile(String inputFileName) throws IOException {
+    public static AlacContext createContext(Supplier<InputStream> streamSupplier) throws IOException {
         DemuxRes demuxRes = new DemuxRes();
         AlacContext ac = new AlacContext();
 
-        AlacInputStream alacInputStream = new AlacInputStream(
-                new FileInputStream(inputFileName)
-        );
+        AlacInputStream alacInputStream = new AlacInputStream(streamSupplier.get());
 
         ac.setAlacInputStream(alacInputStream);
 
@@ -47,9 +49,7 @@ public class AlacUtils {
 
             ac.getAlacInputStream().close();
 
-            alacInputStream = new AlacInputStream(
-                    new FileInputStream(inputFileName)
-            );
+            alacInputStream = new AlacInputStream(streamSupplier.get());
             ac.setAlacInputStream(alacInputStream);
 
             QTMovie qtmovie = new QTMovie(new DataInputStreamWrapper(alacInputStream));

@@ -1,4 +1,4 @@
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.data;
 
 /**
  * // 1 - all ok

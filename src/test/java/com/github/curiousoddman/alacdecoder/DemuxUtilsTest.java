@@ -2,8 +2,8 @@ package com.github.curiousoddman.alacdecoder;
 
 import org.junit.jupiter.api.Test;
 
-import static com.github.curiousoddman.alacdecoder.DemuxUtils.makeFourCC;
-import static com.github.curiousoddman.alacdecoder.DemuxUtils.splitFourCC;
+import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.makeFourCC;
+import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.splitFourCC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DemuxUtilsTest {

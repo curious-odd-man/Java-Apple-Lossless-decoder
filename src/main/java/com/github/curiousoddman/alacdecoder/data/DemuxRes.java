@@ -8,11 +8,8 @@
  ** Distributed under the BSD Software License (see license.txt)
  **
  */
-package com.github.curiousoddman.alacdecoder;
+package com.github.curiousoddman.alacdecoder.data;
 
-import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
-import com.github.curiousoddman.alacdecoder.data.SampleDuration;
-import com.github.curiousoddman.alacdecoder.data.SampleInfo;
 import lombok.Data;
 
 import java.util.ArrayList;
