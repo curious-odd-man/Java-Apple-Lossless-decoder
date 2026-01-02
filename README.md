@@ -14,17 +14,16 @@ What changed:
 https://central.sonatype.com/artifact/com.github.curious-odd-man/alac2wav/versions
 
 Maven:
-```
+```xml
 <dependency>
     <groupId>com.github.curious-odd-man</groupId>
     <artifactId>alac2wav</artifactId>
     <version>1.0</version>
 </dependency>
-
 ```
 
 Gradle:
-```
+```groovy
 implementation("com.github.curious-odd-man:alac2wav:1.0")
 ```
 
