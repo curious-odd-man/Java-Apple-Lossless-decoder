@@ -35,8 +35,8 @@ public class AlacUtils {
 
         /* if qtmovie_read returns successfully, the stream is up to
          * the movie data, which can be used directly by the decoder */
-        int headerRead = new QTMovie(new DataInputStreamWrapper(alacInputStream))
-                .read(demuxRes);
+        QTMovie headerQtMovie = new QTMovie(new DataInputStreamWrapper(alacInputStream));
+        int headerRead = headerQtMovie.read(demuxRes);
 
         if (headerRead == 0) {
             if (demuxRes.getFormatRead() == 0) {
@@ -59,7 +59,7 @@ public class AlacUtils {
             ac.setAlacInputStream(alacInputStream);
 
             QTMovie qtmovie = new QTMovie(new DataInputStreamWrapper(alacInputStream));
-            qtmovie.getQtstream().skip(qtmovie.getSavedMdatPos());
+            qtmovie.getQtstream().skip(headerQtMovie.getSavedMdatPos());
         }
 
         /* initialise the sound converter */

@@ -12,6 +12,7 @@
 package com.github.curiousoddman.alacdecoder;
 
 import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
+import com.github.curiousoddman.alacdecoder.data.SampleInfo;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -283,7 +284,7 @@ public class QTMovie {
 
         int numentries = 0;
         try {
-            numentries = (qtstream.readUint32());
+            numentries = qtstream.readUint32();
         } catch (Exception e) {
             System.err.println("(read_chunk_stts) error reading numentries - possibly number too large");
         }
@@ -293,8 +294,10 @@ public class QTMovie {
         getRes().setNumTimeToSamples(numentries);
 
         for (int i = 0; i < numentries; i++) {
-            getRes().getTimeToSample().get(i).setSampleCount(qtstream.readUint32());
-            getRes().getTimeToSample().get(i).setSampleDuration(qtstream.readUint32());
+            SampleInfo sampleInfo = new SampleInfo();
+            sampleInfo.setSampleCount(qtstream.readUint32());
+            sampleInfo.setSampleDuration(qtstream.readUint32());
+            getRes().getTimeToSample().add(sampleInfo);
             size_remaining -= 8;
         }
 

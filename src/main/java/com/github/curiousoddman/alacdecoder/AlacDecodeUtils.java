@@ -571,7 +571,20 @@ class AlacDecodeUtils {
                 }
 
 
-                another_duplicate_code(alac, outputsamples, readsamplesize, ricemodifier, predictor_coef_table, predictor_coef_num, prediction_type, prediction_quantitization);
+                entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
+
+                if (prediction_type == 0) { // adaptive fir
+                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
+                } else {
+                    System.err.println("FIXME: unhandled predicition type: " + prediction_type);
+
+                    /* i think the only other prediction type (or perhaps this is just a
+                     * boolean?) runs adaptive fir twice.. like:
+                     * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
+                     * predictor_decompress_fir_adapt(predictor_error, outputsamples ...)
+                     * little strange..
+                     */
+                }
 
             } else { // not compressed, easy case
                 if (alac.setinfo_sample_size <= 16) {
@@ -738,7 +751,15 @@ class AlacDecodeUtils {
 
                 /* channel 1 */
 
-                another_duplicate_code(alac, outputsamples, readsamplesize, ricemodifier_a, predictor_coef_table_a, predictor_coef_num_a, prediction_type_a, prediction_quantitization_a);
+                entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_a * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
+
+                if (prediction_type_a == 0) { // adaptive fir
+
+                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a);
+
+                } else { // see mono case
+                    System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
+                }
 
                 /* channel 2 */
                 entropy_rice_decode(alac, alac.predicterror_buffer_b, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_b * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
