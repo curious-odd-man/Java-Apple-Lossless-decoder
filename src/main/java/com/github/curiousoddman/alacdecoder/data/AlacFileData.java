@@ -11,10 +11,12 @@
 package com.github.curiousoddman.alacdecoder.data;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.github.curiousoddman.alacdecoder.AlacDecodeUtils.*;
 
 @Data
+@Slf4j
 public class AlacFileData {
     private static final int BUFFER_SIZE = 16384;
 
@@ -302,16 +304,16 @@ public class AlacFileData {
 
                 if (uncompressedBytes != 0) {
                     for (i = 0; i < outputSamples; i++) {
-                        getUncompressedBytesBufferA()[i] = readbits(uncompressedBytes * 8);
+                        uncompressedBytesBufferA[i] = readbits(uncompressedBytes * 8);
                     }
                 }
 
-                entropyRiceDecode(getPredictErrorBufferA(), outputSamples, readSampleSize, riceModifier * (getRiceHistorymult() / 4));
+                entropyRiceDecode(predictErrorBufferA, outputSamples, readSampleSize, riceModifier * (getRiceHistorymult() / 4));
 
                 if (predictionType == 0) { // adaptive fir
-                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantitization));
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantitization));
                 } else {
-                    System.err.println("FIXME: unhandled predicition type: " + predictionType);
+                    log.error("FIXME: unhandled predicition type: {}", predictionType);
 
                     /* i think the only other prediction type (or perhaps this is just a
                      * boolean?) runs adaptive fir twice.. like:
@@ -329,7 +331,7 @@ public class AlacFileData {
 
                         audiobits = audiobits << bitsmove >> bitsmove;
 
-                        getOutputSamplesBufferA()[i] = audiobits;
+                        outputSamplesBufferA[i] = audiobits;
                     }
                 } else {
                     int m = 1 << 24 - 1;
@@ -339,18 +341,18 @@ public class AlacFileData {
                         int x = audiobits & (1 << 24) - 1;
                         audiobits = (x ^ m) - m;    // sign extend 24 bits
 
-                        getOutputSamplesBufferA()[i] = audiobits;
+                        outputSamplesBufferA[i] = audiobits;
                     }
                 }
                 uncompressedBytes = 0; // always 0 for uncompressed
             }
 
-            switch (getSampleSizeRaw()) {
+            switch (sampleSizeRaw) {
                 case 16: {
 
                     for (int i = 0; i < outputSamples; i++) {
-                        int sample = getOutputSamplesBufferA()[i];
-                        outBuffer[i * getNumChannels()] = sample;
+                        int sample = outputSamplesBufferA[i];
+                        outBuffer[i * numChannels] = sample;
 
                         /*
                          ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
@@ -358,7 +360,7 @@ public class AlacFileData {
                          ** will be overwritten in the next iteration
                          */
 
-                        outBuffer[i * getNumChannels() + 1] = 0;
+                        outBuffer[i * numChannels + 1] = 0;
                     }
                     break;
                 }
@@ -372,9 +374,9 @@ public class AlacFileData {
                             sample = sample | getUncompressedBytesBufferA()[i] & mask;
                         }
 
-                        outBuffer[i * getNumChannels() * 3] = sample & 0xFF;
-                        outBuffer[i * getNumChannels() * 3 + 1] = sample >> 8 & 0xFF;
-                        outBuffer[i * getNumChannels() * 3 + 2] = sample >> 16 & 0xFF;
+                        outBuffer[i * numChannels * 3] = sample & 0xFF;
+                        outBuffer[i * numChannels * 3 + 1] = sample >> 8 & 0xFF;
+                        outBuffer[i * numChannels * 3 + 2] = sample >> 16 & 0xFF;
 
                         /*
                          ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
@@ -382,9 +384,9 @@ public class AlacFileData {
                          ** will be overwritten in the next iteration
                          */
 
-                        outBuffer[i * getNumChannels() * 3 + 3] = 0;
-                        outBuffer[i * getNumChannels() * 3 + 4] = 0;
-                        outBuffer[i * getNumChannels() * 3 + 5] = 0;
+                        outBuffer[i * numChannels * 3 + 3] = 0;
+                        outBuffer[i * numChannels * 3 + 4] = 0;
+                        outBuffer[i * numChannels * 3 + 5] = 0;
 
                     }
                     break;
@@ -535,16 +537,16 @@ public class AlacFileData {
 
             switch (getSampleSizeRaw()) {
                 case 16: {
-                    deinterlace16(getOutputSamplesBufferA(), getOutputSamplesBufferB(), outBuffer, getNumChannels(), outputSamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace16(getOutputSamplesBufferA(), getOutputSamplesBufferB(), outBuffer, numChannels, outputSamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 24: {
-                    deinterlace24(getOutputSamplesBufferA(), getOutputSamplesBufferB(), uncompressed_bytes, getUncompressedBytesBufferA(), getUncompressedBytesBufferB(), outBuffer, getNumChannels(), outputSamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace24(getOutputSamplesBufferA(), getOutputSamplesBufferB(), uncompressed_bytes, getUncompressedBytesBufferA(), getUncompressedBytesBufferB(), outBuffer, numChannels, outputSamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 20:
                 case 32:
-                    System.err.println("FIXME: unimplemented sample size " + getSampleSizeRaw());
+                    log.error("FIXME: unimplemented sample size {}", getSampleSizeRaw());
 
                 default:
 
