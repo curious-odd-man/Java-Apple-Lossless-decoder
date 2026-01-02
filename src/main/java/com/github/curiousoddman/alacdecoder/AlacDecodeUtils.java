@@ -64,101 +64,102 @@ public class AlacDecodeUtils {
         return output;
     }
 
-    public static int[] predictorDecompressFirAdapt(int[] buffer_out, int output_size, int readsamplesize, int[] predictor_coef_table, int predictor_coef_num, int predictor_quantitization) {
-
+    public static int[] predictorDecompressFirAdapt(int[] bufferOut,
+                                                    int outputSize,
+                                                    int readSampleSize,
+                                                    int[] predictorCoefTable,
+                                                    int predictorCoefNum,
+                                                    int predictorQuantization) {
         /* first sample always copies */
-
-        if (predictor_coef_num == 0) {
-            if (output_size <= 1) {
-                return buffer_out;
+        if (predictorCoefNum == 0) {
+            if (outputSize <= 1) {
+                return bufferOut;
             }
-            int sizeToCopy = (output_size - 1) * 4;
-            System.arraycopy(buffer_out, 1, buffer_out, 1, sizeToCopy);
-            return buffer_out;
+            int sizeToCopy = (outputSize - 1) * 4;
+            System.arraycopy(bufferOut, 1, bufferOut, 1, sizeToCopy);
+            return bufferOut;
         }
 
         int bitsmove;
-        if (predictor_coef_num == 0x1f) // 11111 - max value of predictor_coef_num
-        {
+        if (predictorCoefNum == 0x1f) { // 11111 - max value of predictorCoefNum
             /* second-best case scenario for fir decompression,
              * error describes a small difference from the previous sample only
              */
-            if (output_size <= 1) {
-                return buffer_out;
+            if (outputSize <= 1) {
+                return bufferOut;
             }
 
-            for (int i = 0; i < output_size - 1; i++) {
+            for (int i = 0; i < outputSize - 1; i++) {
+                int prevValue = bufferOut[i];
+                int errorValue = bufferOut[i + 1];
 
-                int prev_value = buffer_out[i];
-                int error_value = buffer_out[i + 1];
-
-                bitsmove = 32 - readsamplesize;
-                buffer_out[i + 1] = prev_value + error_value << bitsmove >> bitsmove;
+                bitsmove = 32 - readSampleSize;
+                bufferOut[i + 1] = prevValue + errorValue << bitsmove >> bitsmove;
             }
-            return buffer_out;
+            return bufferOut;
         }
 
         /* read warm-up samples */
-        if (predictor_coef_num > 0) {
-            for (int i = 0; i < predictor_coef_num; i++) {
+        if (predictorCoefNum > 0) {
+            for (int i = 0; i < predictorCoefNum; i++) {
 
-                int val = buffer_out[i] + buffer_out[i + 1];
+                int val = bufferOut[i] + bufferOut[i + 1];
 
-                bitsmove = 32 - readsamplesize;
+                bitsmove = 32 - readSampleSize;
 
                 val = val << bitsmove >> bitsmove;
 
-                buffer_out[i + 1] = val;
+                bufferOut[i + 1] = val;
             }
         }
 
         /* general case */
-        if (predictor_coef_num > 0) {
+        if (predictorCoefNum > 0) {
             int buffer_out_idx = 0;
-            for (int i = predictor_coef_num + 1; i < output_size; i++) {
+            for (int i = predictorCoefNum + 1; i < outputSize; i++) {
                 int sum = 0;
-                int error_val = buffer_out[i];
+                int error_val = bufferOut[i];
 
-                for (int j = 0; j < predictor_coef_num; j++) {
-                    sum += (buffer_out[buffer_out_idx + predictor_coef_num - j] - buffer_out[buffer_out_idx]) * predictor_coef_table[j];
+                for (int j = 0; j < predictorCoefNum; j++) {
+                    sum += (bufferOut[buffer_out_idx + predictorCoefNum - j] - bufferOut[buffer_out_idx]) * predictorCoefTable[j];
                 }
 
-                int outval = (1 << predictor_quantitization - 1) + sum;
-                outval = outval >> predictor_quantitization;
-                outval = outval + buffer_out[buffer_out_idx] + error_val;
-                bitsmove = 32 - readsamplesize;
+                int outval = (1 << predictorQuantization - 1) + sum;
+                outval = outval >> predictorQuantization;
+                outval = outval + bufferOut[buffer_out_idx] + error_val;
+                bitsmove = 32 - readSampleSize;
 
                 outval = outval << bitsmove >> bitsmove;
 
-                buffer_out[buffer_out_idx + predictor_coef_num + 1] = outval;
+                bufferOut[buffer_out_idx + predictorCoefNum + 1] = outval;
 
                 if (error_val > 0) {
-                    int predictor_num = predictor_coef_num - 1;
+                    int predictor_num = predictorCoefNum - 1;
 
                     while (predictor_num >= 0 && error_val > 0) {
-                        int val = buffer_out[buffer_out_idx] - buffer_out[buffer_out_idx + predictor_coef_num - predictor_num];
+                        int val = bufferOut[buffer_out_idx] - bufferOut[buffer_out_idx + predictorCoefNum - predictor_num];
                         int sign = Integer.compare(val, 0);
 
-                        predictor_coef_table[predictor_num] -= sign;
+                        predictorCoefTable[predictor_num] -= sign;
 
                         val *= sign; // absolute value
 
-                        error_val -= (val >> predictor_quantitization) * (predictor_coef_num - predictor_num);
+                        error_val -= (val >> predictorQuantization) * (predictorCoefNum - predictor_num);
 
                         predictor_num--;
                     }
                 } else if (error_val < 0) {
-                    int predictor_num = predictor_coef_num - 1;
+                    int predictor_num = predictorCoefNum - 1;
 
                     while (predictor_num >= 0 && error_val < 0) {
-                        int val = buffer_out[buffer_out_idx] - buffer_out[buffer_out_idx + predictor_coef_num - predictor_num];
+                        int val = bufferOut[buffer_out_idx] - bufferOut[buffer_out_idx + predictorCoefNum - predictor_num];
                         int sign = -Integer.compare(val, 0);
 
-                        predictor_coef_table[predictor_num] -= sign;
+                        predictorCoefTable[predictor_num] -= sign;
 
                         val *= sign; // neg value
 
-                        error_val -= (val >> predictor_quantitization) * (predictor_coef_num - predictor_num);
+                        error_val -= (val >> predictorQuantization) * (predictorCoefNum - predictor_num);
 
                         predictor_num--;
                     }
@@ -167,95 +168,106 @@ public class AlacDecodeUtils {
                 buffer_out_idx++;
             }
         }
-        return buffer_out;
+        return bufferOut;
     }
 
-    public static void deinterlace16(int[] buffer_a, int[] buffer_b, int[] buffer_out, int numchannels, int numsamples, int interlacing_shift, int interlacing_leftweight) {
-
-        if (numsamples <= 0) {
+    public static void deinterlace16(int[] bufferA,
+                                     int[] bufferB,
+                                     int[] bufferOut,
+                                     int numChannels,
+                                     int numSamples,
+                                     int interlacingShift,
+                                     int interlacingLeftWeight) {
+        if (numSamples <= 0) {
             return;
         }
 
         /* weighted interlacing */
-        if (0 != interlacing_leftweight) {
-            for (int i = 0; i < numsamples; i++) {
+        if (0 != interlacingLeftWeight) {
+            for (int i = 0; i < numSamples; i++) {
+                int midRight = bufferA[i];
+                int difference = bufferB[i];
 
-                int midright = buffer_a[i];
-                int difference = buffer_b[i];
-
-                int right = midright - (difference * interlacing_leftweight >> interlacing_shift);
+                int right = midRight - (difference * interlacingLeftWeight >> interlacingShift);
                 int left = right + difference;
 
                 /* output is always little endian */
-
-                buffer_out[i * numchannels] = left;
-                buffer_out[i * numchannels + 1] = right;
+                bufferOut[i * numChannels] = left;
+                bufferOut[i * numChannels + 1] = right;
             }
 
             return;
         }
 
         /* otherwise basic interlacing took place */
-        for (int i = 0; i < numsamples; i++) {
-
-            int left = buffer_a[i];
-            int right = buffer_b[i];
+        for (int i = 0; i < numSamples; i++) {
+            int left = bufferA[i];
+            int right = bufferB[i];
 
             /* output is always little endian */
-
-            buffer_out[i * numchannels] = left;
-            buffer_out[i * numchannels + 1] = right;
+            bufferOut[i * numChannels] = left;
+            bufferOut[i * numChannels + 1] = right;
         }
     }
 
-    public static void deinterlace24(int[] buffer_a, int[] buffer_b, int uncompressed_bytes, int[] uncompressed_bytes_buffer_a, int[] uncompressed_bytes_buffer_b, int[] buffer_out, int numchannels, int numsamples, int interlacing_shift, int interlacing_leftweight) {
-        if (numsamples <= 0) {
+    public static void deinterlace24(int[] bufferA,
+                                     int[] bufferB,
+                                     int uncompressedBytes,
+                                     int[] uncompressedBytesBufferA,
+                                     int[] uncompressedBytesBufferB,
+                                     int[] bufferOut,
+                                     int numChannels,
+                                     int numSamples,
+                                     int interlacingShift,
+                                     int interlacingLeftWeight) {
+        if (numSamples <= 0) {
             return;
         }
 
         /* weighted interlacing */
-        if (interlacing_leftweight != 0) {
-            for (int i = 0; i < numsamples; i++) {
-
-                int midright = buffer_a[i];
-                int difference = buffer_b[i];
-
-                int right = midright - (difference * interlacing_leftweight >> interlacing_shift);
+        if (interlacingLeftWeight != 0) {
+            for (int i = 0; i < numSamples; i++) {
+                int midRight = bufferA[i];
+                int difference = bufferB[i];
+                int right = midRight - (difference * interlacingLeftWeight >> interlacingShift);
                 int left = right + difference;
-
-                extractedDuplicateCode(uncompressed_bytes, uncompressed_bytes_buffer_a, uncompressed_bytes_buffer_b, buffer_out, numchannels, i, left, right);
+                deinterlace24Sample(uncompressedBytes, uncompressedBytesBufferA, uncompressedBytesBufferB, bufferOut, numChannels, i, left, right);
             }
-
             return;
         }
 
         /* otherwise basic interlacing took place */
-        for (int i = 0; i < numsamples; i++) {
-
-            int left = buffer_a[i];
-            int right = buffer_b[i];
-
-            extractedDuplicateCode(uncompressed_bytes, uncompressed_bytes_buffer_a, uncompressed_bytes_buffer_b, buffer_out, numchannels, i, left, right);
+        for (int i = 0; i < numSamples; i++) {
+            int left = bufferA[i];
+            int right = bufferB[i];
+            deinterlace24Sample(uncompressedBytes, uncompressedBytesBufferA, uncompressedBytesBufferB, bufferOut, numChannels, i, left, right);
         }
     }
 
-    private static void extractedDuplicateCode(int uncompressed_bytes, int[] uncompressed_bytes_buffer_a, int[] uncompressed_bytes_buffer_b, int[] buffer_out, int numchannels, int i, int left, int right) {
-        if (uncompressed_bytes != 0) {
-            int mask = ~(0xFFFFFFFF << uncompressed_bytes * 8);
-            left <<= uncompressed_bytes * 8;
-            right <<= uncompressed_bytes * 8;
+    private static void deinterlace24Sample(int uncompressedBytes,
+                                            int[] uncompressedBytesBufferA,
+                                            int[] uncompressedBytesBufferB,
+                                            int[] bufferOut,
+                                            int numChannels,
+                                            int i,
+                                            int left,
+                                            int right) {
+        if (uncompressedBytes != 0) {
+            int mask = ~(0xFFFFFFFF << uncompressedBytes * 8);
+            left <<= uncompressedBytes * 8;
+            right <<= uncompressedBytes * 8;
 
-            left = left | uncompressed_bytes_buffer_a[i] & mask;
-            right = right | uncompressed_bytes_buffer_b[i] & mask;
+            left = left | uncompressedBytesBufferA[i] & mask;
+            right = right | uncompressedBytesBufferB[i] & mask;
         }
 
-        buffer_out[i * numchannels * 3] = left & 0xFF;
-        buffer_out[i * numchannels * 3 + 1] = left >> 8 & 0xFF;
-        buffer_out[i * numchannels * 3 + 2] = left >> 16 & 0xFF;
+        bufferOut[i * numChannels * 3] = left & 0xFF;
+        bufferOut[i * numChannels * 3 + 1] = left >> 8 & 0xFF;
+        bufferOut[i * numChannels * 3 + 2] = left >> 16 & 0xFF;
 
-        buffer_out[i * numchannels * 3 + 3] = right & 0xFF;
-        buffer_out[i * numchannels * 3 + 4] = right >> 8 & 0xFF;
-        buffer_out[i * numchannels * 3 + 5] = right >> 16 & 0xFF;
+        bufferOut[i * numChannels * 3 + 3] = right & 0xFF;
+        bufferOut[i * numChannels * 3 + 4] = right >> 8 & 0xFF;
+        bufferOut[i * numChannels * 3 + 5] = right >> 16 & 0xFF;
     }
 }
 
