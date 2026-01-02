@@ -50,7 +50,7 @@ public class AlacDecodeUtils {
 
     }
 
-    public static int count_leading_zeros(int input, LeadingZeros lz) {
+    public static int countLeadingZeros(int input, LeadingZeros lz) {
         int output = 0;
 
         int curbyte = input >> 24;
@@ -357,7 +357,7 @@ public class AlacDecodeUtils {
                 }
 
 
-                alac.entropy_rice_decode(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
+                alac.entropyRiceDecode(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, ricemodifier * (alac.getRiceHistorymult() / 4));
 
                 if (prediction_type == 0) { // adaptive fir
                     alac.setOutputSamplesBufferA(predictor_decompress_fir_adapt(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization));
@@ -528,7 +528,7 @@ public class AlacDecodeUtils {
 
                 /* channel 1 */
 
-                alac.entropy_rice_decode(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_a * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
+                alac.entropyRiceDecode(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, ricemodifier_a * (alac.getRiceHistorymult() / 4));
 
                 if (prediction_type_a == 0) { // adaptive fir
 
@@ -539,7 +539,7 @@ public class AlacDecodeUtils {
                 }
 
                 /* channel 2 */
-                alac.entropy_rice_decode(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_b * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
+                alac.entropyRiceDecode(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, ricemodifier_b * (alac.getRiceHistorymult() / 4));
 
                 if (prediction_type_b == 0) { // adaptive fir
                     alac.setOutputSamplesBufferB(predictor_decompress_fir_adapt(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));
