@@ -382,44 +382,28 @@ public class QTMovie {
         }
     }
 
-    int read_chunk_mdia(int chunk_len) throws IOException {
-        int size_remaining = chunk_len - 8; // FIXME WRONG
+    void readChunkMdia(int chunkLen) throws IOException {
+        int sizeRemaining = chunkLen - 8; // FIXME WRONG
 
-        while (size_remaining != 0) {
-            int sub_chunk_len;
-
-            try {
-                sub_chunk_len = (qtstream.readUint32());
-            } catch (Exception e) {
-                System.err.println("(read_chunk_mdia) error reading sub_chunk_len - possibly number too large");
-                sub_chunk_len = 0;
+        while (sizeRemaining != 0) {
+            int subChunkLen = qtstream.readUint32();
+            if (subChunkLen <= 1 || subChunkLen > sizeRemaining) {
+                throw new UnsupportedFormatException("strange size for chunk inside mdia\n");
             }
 
-            if (sub_chunk_len <= 1 || sub_chunk_len > size_remaining) {
-                System.err.println("strange size for chunk inside mdia\n");
-                return 0;
-            }
-
-            int sub_chunk_id = qtstream.readUint32();
-
-            if (sub_chunk_id == makeFourCC(109, 100, 104, 100))    // fourcc equals mdhd
-            {
-                readChunkMdhd(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(104, 100, 108, 114))    // fourcc equals hdlr
-            {
-                readChunkHandler(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(109, 105, 110, 102))    // fourcc equals minf
-            {
-                readChunkMinf(sub_chunk_len);
+            int subChunkId = qtstream.readUint32();
+            if (subChunkId == makeFourCC(109, 100, 104, 100)) {   // fourcc equals mdhd
+                readChunkMdhd(subChunkLen);
+            } else if (subChunkId == makeFourCC(104, 100, 108, 114)) {   // fourcc equals hdlr
+                readChunkHandler(subChunkLen);
+            } else if (subChunkId == makeFourCC(109, 105, 110, 102)) {   // fourcc equals minf
+                readChunkMinf(subChunkLen);
             } else {
-                System.err.println("(mdia) unknown chunk id: " + splitFourCC(sub_chunk_id));
-                return 0;
+                throw new UnsupportedFormatException("(mdia) unknown chunk id: " + splitFourCC(subChunkId));
             }
 
-            size_remaining -= sub_chunk_len;
+            sizeRemaining -= subChunkLen;
         }
-
-        return 1;
     }
 
     /* 'trak' - a movie track - contains other atoms */
@@ -448,7 +432,7 @@ public class QTMovie {
                 readChunkTkhd(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(109, 100, 105, 97))    // fourcc equals mdia
             {
-                if (read_chunk_mdia(sub_chunk_len) == 0) return 0;
+                readChunkMdia(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(101, 100, 116, 115))    // fourcc equals edts
             {
                 readChunkEdts(sub_chunk_len);
