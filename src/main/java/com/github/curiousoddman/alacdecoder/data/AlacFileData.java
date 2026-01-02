@@ -20,39 +20,39 @@ public class AlacFileData {
     private final int numChannels;
     private final int bytesPerSample;
 
-    private final int[] predictor_coef_table = new int[1024];
-    private final int[] predictor_coef_table_a = new int[1024];
-    private final int[] predictor_coef_table_b = new int[1024];
+    private final int[] predictorCoefTable = new int[1024];
+    private final int[] predictorCoefTableA = new int[1024];
+    private final int[] predictorCoefTableB = new int[1024];
 
-    private final int[] predicterror_buffer_a = new int[BUFFER_SIZE];
-    private final int[] predicterror_buffer_b = new int[BUFFER_SIZE];
-    private final int[] uncompressed_bytes_buffer_a = new int[BUFFER_SIZE];
-    private final int[] uncompressed_bytes_buffer_b = new int[BUFFER_SIZE];
+    private final int[] predicterrorBufferA = new int[BUFFER_SIZE];
+    private final int[] predicterrorBufferB = new int[BUFFER_SIZE];
+    private final int[] uncompressedBytesBufferA = new int[BUFFER_SIZE];
+    private final int[] uncompressedBytesBufferB = new int[BUFFER_SIZE];
 
-    public byte[] input_buffer;
+    public byte[] inputBuffer;
     public int ibIdx = 0;
-    public int input_buffer_bitaccumulator = 0; /* used so we can do arbitary
+    public int inputBufferBitaccumulator = 0; /* used so we can do arbitary
 						bit reads */
     public final LeadingZeros lz = new LeadingZeros();
     /* stuff from setinfo */
-    public int setinfo_max_samples_per_frame = 0; // 0x1000 = 4096
-    public int setinfo_7a = 0; // 0x00
-    public int setinfo_sample_size = 0; // 0x10
-    public int setinfo_rice_historymult = 0; // 0x28
-    public int setinfo_rice_initialhistory = 0; // 0x0a
+    public int setInfoMaxSamplesPerFrame = 0; // 0x1000 = 4096
+    public int setInfo7A = 0; // 0x00
+    public int setInfoSampleSize = 0; // 0x10
+    public int setInfoRiceHistorymult = 0; // 0x28
+    public int setInfoRiceInitialhistory = 0; // 0x0a
     /* max samples per frame? */
-    public int setinfo_rice_kmodifier = 0; // 0x0e
-    public int setinfo_7f = 0; // 0x02
-    public int setinfo_80 = 0; // 0x00ff
-    public int setinfo_82 = 0; // 0x000020e7
+    public int setInfoRiceKmodifier = 0; // 0x0e
+    public int setInfo7F = 0; // 0x02
+    public int setInfo80 = 0; // 0x00ff
+    public int setInfo82 = 0; // 0x000020e7
     /* max sample size?? */
-    public int setinfo_86 = 0; // 0x00069fe4
+    public int setInfo86 = 0; // 0x00069fe4
     /* bit rate (avarge)?? */
-    public int setinfo_8a_rate = 0; // 0x0000ac44
+    public int setInfo8ARate = 0; // 0x0000ac44
 
-    public int[] outputsamples_buffer_a = new int[BUFFER_SIZE];
+    public int[] outputSamplesBufferA = new int[BUFFER_SIZE];
     /* end setinfo stuff */
-    public int[] outputsamples_buffer_b = new int[BUFFER_SIZE];
+    public int[] outputSamplesBufferB = new int[BUFFER_SIZE];
 
 
     public AlacFileData(int sampleSize, int numChannels) {

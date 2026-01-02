@@ -29,7 +29,6 @@ public class AlacContext implements AutoCloseable {
     private int offset;
     private byte[] readBuffer = new byte[1024 * 80]; // sample big enough to hold any input for a single alac frame
 
-
     public int unpackSamples(int[] destBuffer) throws IOException {
         byte[] readBuffer = getReadBuffer();
         DataInputStreamWrapper inputStream = new DataInputStreamWrapper(getAlacInputStream());
