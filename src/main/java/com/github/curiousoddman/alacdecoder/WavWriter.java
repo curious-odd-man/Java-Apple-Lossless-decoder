@@ -55,14 +55,14 @@ public class WavWriter {
         writeUint32(os, dataSize);
     }
 
-    private static void writeUint32(OutputStream f, int v) throws IOException {
+    static void writeUint32(OutputStream f, int v) throws IOException {
         f.write((byte) (v));
         f.write((byte) (v >>> 8));
         f.write((byte) (v >>> 16));
         f.write((byte) (v >>> 24));
     }
 
-    private static void writeUint16(OutputStream f, int v) throws IOException {
+    static void writeUint16(OutputStream f, int v) throws IOException {
         f.write((byte) (v));
         f.write((byte) (v >>> 8));
     }
