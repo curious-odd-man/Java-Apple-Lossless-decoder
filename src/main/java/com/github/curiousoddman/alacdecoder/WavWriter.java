@@ -10,59 +10,59 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public class WavWriter {
-    public static void writeHeaders(FileOutputStream fos,
+    public static void writeHeaders(OutputStream os,
                                     int dataSize,
                                     int numChannels,
                                     int sampleRate,
                                     int bytesPerSample,
                                     int bitsPerSample) throws IOException {
         /* write RIFF header */
-        fos.write(82);
-        fos.write(73);
-        fos.write(70);
-        fos.write(70);    // "RIFF" ascii values
+        os.write(82);
+        os.write(73);
+        os.write(70);
+        os.write(70);    // "RIFF" ascii values
 
-        writeUint32(fos, (36 + dataSize));
-        fos.write(87);
-        fos.write(65);
-        fos.write(86);
-        fos.write(69);   // "WAVE" ascii values
+        writeUint32(os, (36 + dataSize));
+        os.write(87);
+        os.write(65);
+        os.write(86);
+        os.write(69);   // "WAVE" ascii values
 
         /* write fmt header */
-        fos.write(102);
-        fos.write(109);
-        fos.write(116);
-        fos.write(32);  // "fmt " ascii values
+        os.write(102);
+        os.write(109);
+        os.write(116);
+        os.write(32);  // "fmt " ascii values
 
-        writeUint32(fos, 16);
-        writeUint16(fos, 1); // PCM data
-        writeUint16(fos, numChannels);
-        writeUint32(fos, sampleRate);
-        writeUint32(fos, (sampleRate * numChannels * bytesPerSample)); // byterate
-        writeUint16(fos, (numChannels * bytesPerSample));
-        writeUint16(fos, bitsPerSample);
+        writeUint32(os, 16);
+        writeUint16(os, 1); // PCM data
+        writeUint16(os, numChannels);
+        writeUint32(os, sampleRate);
+        writeUint32(os, (sampleRate * numChannels * bytesPerSample)); // byterate
+        writeUint16(os, (numChannels * bytesPerSample));
+        writeUint16(os, bitsPerSample);
 
         /* write data header */
-        fos.write(100);
-        fos.write(97);
-        fos.write(116);
-        fos.write(97);  // "data" ascii values
+        os.write(100);
+        os.write(97);
+        os.write(116);
+        os.write(97);  // "data" ascii values
 
-        writeUint32(fos, dataSize);
+        writeUint32(os, dataSize);
     }
 
-    private static void writeUint32(FileOutputStream f, int v) throws IOException {
+    private static void writeUint32(OutputStream f, int v) throws IOException {
         f.write((byte) (v));
         f.write((byte) (v >>> 8));
         f.write((byte) (v >>> 16));
         f.write((byte) (v >>> 24));
     }
 
-    private static void writeUint16(FileOutputStream f, int v) throws IOException {
+    private static void writeUint16(OutputStream f, int v) throws IOException {
         f.write((byte) (v));
         f.write((byte) (v >>> 8));
     }
