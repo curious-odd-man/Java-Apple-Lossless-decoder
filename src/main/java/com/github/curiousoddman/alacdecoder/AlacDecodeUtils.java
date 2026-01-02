@@ -392,7 +392,7 @@ class AlacDecodeUtils {
 
         /* setup the stream */
         alac.setInputBuffer(inbuffer);
-        alac.setInputBufferBitaccumulator(0);
+        alac.setInputBufferBitAccumulator(0);
         alac.setIbIdx(0);
 
         int channels = alac.readbits(3);

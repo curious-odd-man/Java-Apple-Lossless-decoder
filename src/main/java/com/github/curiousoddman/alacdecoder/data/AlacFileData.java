@@ -43,7 +43,7 @@ public class AlacFileData {
 
     private byte[] inputBuffer;
     private int ibIdx = 0;
-    private int inputBufferBitaccumulator = 0; /* used so we can do arbitary
+    private int inputBufferBitAccumulator = 0; /* used so we can do arbitary
 						bit reads */
     private final LeadingZeros lz = new LeadingZeros();
 
@@ -89,9 +89,7 @@ public class AlacFileData {
     }
 
     /* supports reading 1 to 16 bits, in big endian format */
-    int readbits_16(int bits) {
-        byte[] inputBuffer = getInputBuffer();
-        int ibIdx = getIbIdx();
+    int readbits16(int bits) {
         int part1 = inputBuffer[ibIdx] & 0xff;
         int part2 = inputBuffer[ibIdx + 1] & 0xff;
         int part3 = inputBuffer[ibIdx + 2] & 0xff;
@@ -101,7 +99,7 @@ public class AlacFileData {
         /* shift left by the number of bits we've already read,
          * so that the top 'n' bits of the 24 bits we read will
          * be the return bits */
-        result = result << getInputBufferBitaccumulator();
+        result = result << inputBufferBitAccumulator;
 
         result = result & 0x00ffffff;
 
@@ -109,13 +107,13 @@ public class AlacFileData {
          * n is 'bits' */
         result = result >> 24 - bits;
 
-        int new_accumulator = getInputBufferBitaccumulator() + bits;
+        int newAccumulator = inputBufferBitAccumulator + bits;
 
         /* increase the buffer pointer if we've read over n bytes. */
-        setIbIdx(getIbIdx() + (new_accumulator >> 3));
+        ibIdx += newAccumulator >> 3;
 
         /* and the remainder goes back into the bit accumulator */
-        setInputBufferBitaccumulator(new_accumulator & 7);
+        inputBufferBitAccumulator = newAccumulator & 7;
 
         return result;
     }
@@ -126,38 +124,32 @@ public class AlacFileData {
 
         if (bits > 16) {
             bits -= 16;
-
-            result = readbits_16(16) << bits;
+            result = readbits16(16) << bits;
         }
 
-        result |= readbits_16(bits);
+        result |= readbits16(bits);
 
         return result;
     }
 
     /* reads a single bit */
     public int readbit() {
-
         int result = getInputBuffer()[getIbIdx()] & 0xff;
-
-        result = result << getInputBufferBitaccumulator();
-
+        result = result << inputBufferBitAccumulator;
         result = result >> 7 & 1;
 
-        int new_accumulator = getInputBufferBitaccumulator() + 1;
-
-        setIbIdx(getIbIdx() + new_accumulator / 8);
-
-        setInputBufferBitaccumulator(new_accumulator % 8);
+        int newAccumulator = inputBufferBitAccumulator + 1;
+        ibIdx += newAccumulator / 8;
+        inputBufferBitAccumulator = newAccumulator % 8;
 
         return result;
     }
 
     public void unreadbits() {
-        int new_accumulator = getInputBufferBitaccumulator() - 1;
+        int new_accumulator = inputBufferBitAccumulator - 1;
 
         setIbIdx(getIbIdx() + (new_accumulator >> 3));
 
-        setInputBufferBitaccumulator(new_accumulator & 7);
+        inputBufferBitAccumulator = new_accumulator & 7;
     }
 }
