@@ -255,7 +255,7 @@ public class AlacFileData {
         ibIdx = 0;
 
         int channels = readbits(3);
-        int outputSize = outputSamples * getBytesPerSample();
+        int outputSize = outputSamples * bytesPerSample;
 
         if (channels == 0) {// 1 channel
             /* 2^result = something to do with output waiting.
@@ -272,10 +272,10 @@ public class AlacFileData {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputSamples = readbits(32);
-                outputSize = outputSamples * getBytesPerSample();
+                outputSize = outputSamples * bytesPerSample;
             }
 
-            int readSampleSize = getSampleSizeRaw() - uncompressedBytes * 8;
+            int readSampleSize = sampleSizeRaw - uncompressedBytes * 8;
 
             if (isNotCompressed == 0) { // so it is compressed
                 /* skip 16 bits, not sure what they are. seem to be used in
@@ -324,10 +324,10 @@ public class AlacFileData {
                 }
 
             } else { // not compressed, easy case
-                if (getSampleSizeRaw() <= 16) {
+                if (sampleSizeRaw <= 16) {
                     for (int i = 0; i < outputSamples; i++) {
                         int audiobits = readbits(getSampleSizeRaw());
-                        int bitsmove = 32 - getSampleSizeRaw();
+                        int bitsmove = 32 - sampleSizeRaw;
 
                         audiobits = audiobits << bitsmove >> bitsmove;
 
@@ -337,7 +337,7 @@ public class AlacFileData {
                     int m = 1 << 24 - 1;
                     for (int i = 0; i < outputSamples; i++) {
 
-                        int audiobits = getAudiobits();
+                        int audiobits = getAudioBits();
                         int x = audiobits & (1 << 24) - 1;
                         audiobits = (x ^ m) - m;    // sign extend 24 bits
 
@@ -417,10 +417,10 @@ public class AlacFileData {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputSamples = readbits(32);
-                outputSize = outputSamples * getBytesPerSample();
+                outputSize = outputSamples * bytesPerSample;
             }
 
-            int readsamplesize = getSampleSizeRaw() - uncompressed_bytes * 8 + 1;
+            int readsamplesize = sampleSizeRaw - uncompressed_bytes * 8 + 1;
 
             int interlacing_leftweight;
             int interlacing_shift;
@@ -498,14 +498,14 @@ public class AlacFileData {
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_b);
                 }
             } else { // not compressed, easy case
-                if (getSampleSizeRaw() <= 16) {
+                if (sampleSizeRaw <= 16) {
 
                     for (int i = 0; i < outputSamples; i++) {
 
                         int audiobits_a = readbits(getSampleSizeRaw());
                         int audiobits_b = readbits(getSampleSizeRaw());
 
-                        int bitsmove = 32 - getSampleSizeRaw();
+                        int bitsmove = 32 - sampleSizeRaw;
 
                         audiobits_a = audiobits_a << bitsmove >> bitsmove;
                         audiobits_b = audiobits_b << bitsmove >> bitsmove;
@@ -518,11 +518,11 @@ public class AlacFileData {
 
                     for (int i = 0; i < outputSamples; i++) {
 
-                        int audiobits_a = getAudiobits();
+                        int audiobits_a = getAudioBits();
                         int x = audiobits_a & (1 << 24) - 1;
                         audiobits_a = (x ^ m) - m;        // sign extend 24 bits
 
-                        int audiobits_b = getAudiobits();
+                        int audiobits_b = getAudioBits();
                         x = audiobits_b & (1 << 24) - 1;
                         audiobits_b = (x ^ m) - m;        // sign extend 24 bits
 
@@ -555,12 +555,12 @@ public class AlacFileData {
         return outputSize;
     }
 
-    private int getAudiobits() {
-        int audiobits = readbits(16);
+    private int getAudioBits() {
+        int audioBits = readbits(16);
         /* special case of sign extension..
          * as we'll be ORing the low 16bits into this */
-        audiobits = audiobits << getSampleSizeRaw() - 16;
-        audiobits = audiobits | readbits(getSampleSizeRaw() - 16);
-        return audiobits;
+        audioBits = audioBits << sampleSizeRaw - 16;
+        audioBits = audioBits | readbits(sampleSizeRaw - 16);
+        return audioBits;
     }
 }
