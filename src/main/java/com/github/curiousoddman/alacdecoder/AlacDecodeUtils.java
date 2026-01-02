@@ -458,7 +458,7 @@ class AlacDecodeUtils {
         buffer_out[i * numchannels * 3 + 5] = right >> 16 & 0xFF;
     }
 
-    public static int decode_frame(AlacFileData alac, byte[] inbuffer, int[] outbuffer) {
+    public static int decodeFrame(AlacFileData alac, byte[] inbuffer, int[] outbuffer) {
         int outputsamples = alac.getMaxSamplesPerFrame();
 
         /* setup the stream */
@@ -466,14 +466,12 @@ class AlacDecodeUtils {
         alac.inputBufferBitaccumulator = 0;
         alac.ibIdx = 0;
 
-
         int channels = readbits(alac, 3);
 
         int outputsize = outputsamples * alac.getBytesPerSample();
 
         if (channels == 0) // 1 channel
         {
-
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
@@ -559,11 +557,7 @@ class AlacDecodeUtils {
                     int m = 1 << 24 - 1;
                     for (int i = 0; i < outputsamples; i++) {
 
-                        int audiobits = readbits(alac, 16);
-                        /* special case of sign extension..
-                         * as we'll be ORing the low 16bits into this */
-                        audiobits = audiobits << alac.getSampleSizeRaw() - 16;
-                        audiobits = audiobits | readbits(alac, alac.getSampleSizeRaw() - 16);
+                        int audiobits = getAudiobits(alac);
                         int x = audiobits & (1 << 24) - 1;
                         audiobits = (x ^ m) - m;    // sign extend 24 bits
 
@@ -744,15 +738,11 @@ class AlacDecodeUtils {
 
                     for (int i = 0; i < outputsamples; i++) {
 
-                        int audiobits_a = readbits(alac, 16);
-                        audiobits_a = audiobits_a << alac.getSampleSizeRaw() - 16;
-                        audiobits_a = audiobits_a | readbits(alac, alac.getSampleSizeRaw() - 16);
+                        int audiobits_a = getAudiobits(alac);
                         int x = audiobits_a & (1 << 24) - 1;
                         audiobits_a = (x ^ m) - m;        // sign extend 24 bits
 
-                        int audiobits_b = readbits(alac, 16);
-                        audiobits_b = audiobits_b << alac.getSampleSizeRaw() - 16;
-                        audiobits_b = audiobits_b | readbits(alac, alac.getSampleSizeRaw() - 16);
+                        int audiobits_b = getAudiobits(alac);
                         x = audiobits_b & (1 << 24) - 1;
                         audiobits_b = (x ^ m) - m;        // sign extend 24 bits
 
@@ -783,6 +773,15 @@ class AlacDecodeUtils {
             }
         }
         return outputsize;
+    }
+
+    private static int getAudiobits(AlacFileData alac) {
+        int audiobits = readbits(alac, 16);
+        /* special case of sign extension..
+         * as we'll be ORing the low 16bits into this */
+        audiobits = audiobits << alac.getSampleSizeRaw() - 16;
+        audiobits = audiobits | readbits(alac, alac.getSampleSizeRaw() - 16);
+        return audiobits;
     }
 }
 
