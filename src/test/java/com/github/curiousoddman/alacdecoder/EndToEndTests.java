@@ -13,7 +13,6 @@ public class EndToEndTests {
 
     @Test
     void convertAlacToWavTest() throws IOException {
-
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
              AlacContext ac = AlacUtils.openFile(Path.of("src/test/resources/white_noise.m4a").toAbsolutePath().toString());) {
             int numChannels = ac.getNumChannels();
@@ -43,6 +42,42 @@ public class EndToEndTests {
 
             byte[] output = byteArrayOutputStream.toByteArray();
             byte[] expected = Files.readAllBytes(Path.of("src/test/resources/white_noise.wav"));
+            //Files.write(Path.of("src/test/resources/white_noise.act.wav"), output);
+            assertArrayEquals(expected, output);
+        }
+    }
+
+    @Test
+    void convertAlacToWavMonoTest() throws IOException {
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+             AlacContext ac = AlacUtils.openFile(Path.of("src/test/resources/white_noise_mono.m4a").toAbsolutePath().toString());) {
+            int numChannels = ac.getNumChannels();
+            int totalSamples = ac.getNumSamples();
+            int bytesPerSample = ac.getBytesPerSample();
+            int sampleRate = ac.getSampleRate();
+            int bitsPerSample = ac.getBitsPerSample();
+            WavWriter.writeHeaders(byteArrayOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
+
+            // 24kb buffer = 4096 frames = 1 alac sample (we support max 24bps)
+            int destBufferSize = 1024 * 24 * 3;
+            int[] pdestbuffer = new int[destBufferSize];
+
+            int bytes_unpacked;
+            int counter = 0;
+            do {
+                bytes_unpacked = ac.unpackSamples(pdestbuffer);
+
+                if (bytes_unpacked > 0) {
+                    byte[] pcmBuffer = format_samples(bytesPerSample, pdestbuffer, bytes_unpacked);
+                    byteArrayOutputStream.write(pcmBuffer, 0, bytes_unpacked);
+                }
+
+                counter++;
+            } while (bytes_unpacked != 0);
+
+
+            byte[] output = byteArrayOutputStream.toByteArray();
+            byte[] expected = Files.readAllBytes(Path.of("src/test/resources/white_noise_mono.wav"));
             //Files.write(Path.of("src/test/resources/white_noise.act.wav"), output);
             assertArrayEquals(expected, output);
         }

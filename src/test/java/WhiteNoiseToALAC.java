@@ -8,18 +8,19 @@ public class WhiteNoiseToALAC {
     public static void main(String[] args) throws Exception {
         int durationSeconds = 10;
         int sampleRate = 44100;
-        int channels = 2; // stereo
+        int channels = 1; // stereo
         int bitsPerSample = 16;
+        String wavFilePath = "white_noise_mono.wav";
+        String alacFilePath = "white_noise_mono.m4a";
 
         // Generate white noise PCM data
         byte[] pcmData = generateWhiteNoise(durationSeconds, sampleRate, channels, bitsPerSample);
 
         // Write PCM data to WAV file
-        String wavFilePath = "white_noise.wav";
+
         writeWavFile(wavFilePath, pcmData, sampleRate, channels, bitsPerSample);
 
         // Convert WAV to ALAC using ffmpeg
-        String alacFilePath = "white_noise.m4a";
         convertWavToAlac(wavFilePath, alacFilePath);
 
         System.out.println("ALAC file generated at: " + alacFilePath);
