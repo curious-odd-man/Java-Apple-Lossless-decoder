@@ -15,7 +15,7 @@ public class EndToEndTests {
     void convertAlacToWavTest() throws IOException {
 
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-             AlacContext ac = AlacUtils.alacOpenFileInput(Path.of("src/test/resources/white_noise.m4a").toAbsolutePath().toString());) {
+             AlacContext ac = AlacUtils.openFile(Path.of("src/test/resources/white_noise.m4a").toAbsolutePath().toString());) {
             int numChannels = ac.getNumChannels();
             int totalSamples = ac.getNumSamples();
             int bytesPerSample = ac.getBytesPerSample();
@@ -30,7 +30,7 @@ public class EndToEndTests {
             int bytes_unpacked;
             int counter = 0;
             do {
-                bytes_unpacked = AlacUtils.AlacUnpackSamples(ac, pdestbuffer);
+                bytes_unpacked = ac.unpackSamples(pdestbuffer);
 
                 if (bytes_unpacked > 0) {
                     byte[] pcmBuffer = format_samples(bytesPerSample, pdestbuffer, bytes_unpacked);

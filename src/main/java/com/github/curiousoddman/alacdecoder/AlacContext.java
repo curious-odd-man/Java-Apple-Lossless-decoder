@@ -12,8 +12,10 @@
 package com.github.curiousoddman.alacdecoder;
 
 import com.github.curiousoddman.alacdecoder.data.AlacFileData;
+import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
 import com.github.curiousoddman.alacdecoder.data.SampleDuration;
 import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
+import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import lombok.Data;
 
 import java.io.IOException;
@@ -26,6 +28,78 @@ public class AlacContext implements AutoCloseable {
     private int currentSampleBlock = 0;
     private int offset;
     private byte[] readBuffer = new byte[1024 * 80]; // sample big enough to hold any input for a single alac frame
+
+
+    public int unpackSamples(int[] destBuffer) throws IOException {
+        byte[] readBuffer = getReadBuffer();
+        DataInputStreamWrapper inputStream = new DataInputStreamWrapper(getAlacInputStream());
+
+        // if current_sample_block is beyond last block then finished
+
+        if (getCurrentSampleBlock() >= getDemuxRes().getSampleByteSize().length) {
+            return 0;
+        }
+
+        SampleDuration sampleInfo = getDemuxRes().getSampleInfo(getCurrentSampleBlock());
+        int sampleByteSize = sampleInfo.getSampleByteSize();
+
+        inputStream.read(sampleByteSize, readBuffer, 0);
+
+        /* now fetch */
+
+        int outputBytes = AlacDecodeUtils.decode_frame(getAlacFileData(), readBuffer, destBuffer);
+
+        setCurrentSampleBlock(getCurrentSampleBlock() + 1);
+        outputBytes -= getOffset() * getBytesPerSample();
+        System.arraycopy(destBuffer, getOffset(), destBuffer, 0, outputBytes);
+        setOffset(0);
+        return outputBytes;
+    }
+
+    // Get total number of samples contained in the Apple Lossless file, or -1 if unknown
+
+
+    /**
+     * sets position in pcm samples
+     *
+     * @param position position in pcm samples to go to
+     */
+
+    public void setPosition(long position) throws IOException {
+        DemuxRes res = getDemuxRes();
+
+        int currentPosition = 0;
+        int currentSample = 0;
+        for (int i = 0; i < res.getStsc().length; i++) {
+            ChunkInfo chunkInfo = res.getStsc()[i];
+            int lastChunk;
+
+            if (i < res.getStsc().length - 1) {
+                lastChunk = res.getStsc()[i + 1].getFirstChunk();
+            } else {
+                lastChunk = res.getStco().length;
+            }
+
+            for (int chunk = chunkInfo.getFirstChunk(); chunk <= lastChunk; chunk++) {
+                int pos = res.getStco()[chunk - 1];
+                int samplesPerChunk = chunkInfo.getSamplesPerChunk();
+                while (samplesPerChunk > 0) {
+                    SampleDuration sampleDuration = res.getSampleInfo(currentSample);
+                    currentPosition += sampleDuration.getSampleDuration();
+                    if (position < currentPosition) {
+                        getAlacInputStream().seek(pos);
+                        setCurrentSampleBlock(currentSample);
+                        setOffset((int) (position - (currentPosition - sampleDuration.getSampleDuration()))
+                                * getNumChannels());
+                        return;
+                    }
+                    pos += sampleDuration.getSampleByteSize();
+                    currentSample++;
+                    samplesPerChunk--;
+                }
+            }
+        }
+    }
 
     public int getNumSamples() {
         int numSamples = 0;

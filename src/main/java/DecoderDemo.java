@@ -26,7 +26,7 @@ public class DecoderDemo {
         Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
 
         try (FileOutputStream fileOutputStream = new FileOutputStream(config.outputFileName());
-             AlacContext ac = AlacUtils.alacOpenFileInput(config.inputFileName())) {
+             AlacContext ac = AlacUtils.openFile(config.inputFileName())) {
 
             int numChannels = ac.getNumChannels();
             System.out.println("The Apple Lossless file has " + numChannels + " channels");
@@ -137,7 +137,7 @@ public class DecoderDemo {
 
         int bytesUnpacked;
         do {
-            bytesUnpacked = AlacUtils.AlacUnpackSamples(ac, destinationBuffer);
+            bytesUnpacked = ac.unpackSamples(destinationBuffer);
 
             if (bytesUnpacked > 0) {
                 byte[] pcmBuffer = formatSamples(bps, destinationBuffer, bytesUnpacked);
