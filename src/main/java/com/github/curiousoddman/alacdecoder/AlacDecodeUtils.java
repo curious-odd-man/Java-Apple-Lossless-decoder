@@ -17,9 +17,9 @@ import com.github.curiousoddman.alacdecoder.data.LeadingZeros;
 class AlacDecodeUtils {
     /* supports reading 1 to 16 bits, in big endian format */
     static int readbits_16(AlacFileData alac, int bits) {
-        int part1 = alac.inputBuffer[alac.ibIdx] & 0xff;
-        int part2 = alac.inputBuffer[alac.ibIdx + 1] & 0xff;
-        int part3 = alac.inputBuffer[alac.ibIdx + 2] & 0xff;
+        int part1 = alac.getInputBuffer()[alac.ibIdx] & 0xff;
+        int part2 = alac.getInputBuffer()[alac.ibIdx + 1] & 0xff;
+        int part3 = alac.getInputBuffer()[alac.ibIdx + 2] & 0xff;
 
         int result = part1 << 16 | part2 << 8 | part3;
 
@@ -63,7 +63,7 @@ class AlacDecodeUtils {
     /* reads a single bit */
     static int readbit(AlacFileData alac) {
 
-        int result = alac.inputBuffer[alac.ibIdx] & 0xff;
+        int result = alac.getInputBuffer()[alac.ibIdx] & 0xff;
 
         result = result << alac.inputBufferBitaccumulator;
 
@@ -204,7 +204,7 @@ class AlacDecodeUtils {
 
         while (outputCount < outputSize) {
 
-            int k = 31 - rice_kmodifier - count_leading_zeros((history >> 9) + 3, alac.lz);
+            int k = 31 - rice_kmodifier - count_leading_zeros((history >> 9) + 3, alac.getLz());
 
             if (k < 0) {
                 k += rice_kmodifier;
@@ -238,7 +238,7 @@ class AlacDecodeUtils {
 
                 signModifier = 1;
 
-                k = count_leading_zeros(history, alac.lz) + (history + 16) / 64 - 24;
+                k = count_leading_zeros(history, alac.getLz()) + (history + 16) / 64 - 24;
 
                 // note: blockSize is always 16bit
                 int blockSize = entropy_decode_value(alac, 16, k, rice_kmodifier_mask);
@@ -462,7 +462,7 @@ class AlacDecodeUtils {
         int outputsamples = alac.getMaxSamplesPerFrame();
 
         /* setup the stream */
-        alac.inputBuffer = inbuffer;
+        alac.setInputBuffer(inbuffer);
         alac.inputBufferBitaccumulator = 0;
         alac.ibIdx = 0;
 

@@ -41,11 +41,11 @@ public class AlacFileData {
     private int eight6 = 0; // 0x00069fe4
     private int eigthARate = 0; // 0x0000ac44
 
-    public byte[] inputBuffer;
+    private byte[] inputBuffer;
     public int ibIdx = 0;
     public int inputBufferBitaccumulator = 0; /* used so we can do arbitary
 						bit reads */
-    public final LeadingZeros lz = new LeadingZeros();
+    private final LeadingZeros lz = new LeadingZeros();
 
     private int[] outputSamplesBufferA = new int[BUFFER_SIZE];
     private int[] outputSamplesBufferB = new int[BUFFER_SIZE];
