@@ -41,6 +41,10 @@ public class DataInputStreamWrapper {
         return bytesRead;
     }
 
+    public void skipBytes(int skip) throws IOException {
+        currentPos += stream.skipBytes(skip);
+    }
+
     public int readUint32() throws IOException {
         int bytesRead = stream.read(readBuf, 0, 4);
         currentPos += bytesRead;
