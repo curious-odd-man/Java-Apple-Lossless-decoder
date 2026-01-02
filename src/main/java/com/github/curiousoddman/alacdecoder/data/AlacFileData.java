@@ -47,9 +47,8 @@ public class AlacFileData {
 						bit reads */
     public final LeadingZeros lz = new LeadingZeros();
 
-    public int[] outputSamplesBufferA = new int[BUFFER_SIZE];
-    /* end setinfo stuff */
-    public int[] outputSamplesBufferB = new int[BUFFER_SIZE];
+    private int[] outputSamplesBufferA = new int[BUFFER_SIZE];
+    private int[] outputSamplesBufferB = new int[BUFFER_SIZE];
 
     public AlacFileData(int sampleSize, int numChannels) {
         this.sampleSize = sampleSize;

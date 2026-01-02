@@ -531,7 +531,7 @@ class AlacDecodeUtils {
                 entropy_rice_decode(alac, alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
 
                 if (prediction_type == 0) { // adaptive fir
-                    alac.outputSamplesBufferA = predictor_decompress_fir_adapt(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
+                    alac.setOutputSamplesBufferA(predictor_decompress_fir_adapt(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization));
                 } else {
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type);
 
@@ -551,7 +551,7 @@ class AlacDecodeUtils {
 
                         audiobits = audiobits << bitsmove >> bitsmove;
 
-                        alac.outputSamplesBufferA[i] = audiobits;
+                        alac.getOutputSamplesBufferA()[i] = audiobits;
                     }
                 } else {
                     int m = 1 << 24 - 1;
@@ -561,7 +561,7 @@ class AlacDecodeUtils {
                         int x = audiobits & (1 << 24) - 1;
                         audiobits = (x ^ m) - m;    // sign extend 24 bits
 
-                        alac.outputSamplesBufferA[i] = audiobits;
+                        alac.getOutputSamplesBufferA()[i] = audiobits;
                     }
                 }
                 uncompressed_bytes = 0; // always 0 for uncompressed
@@ -571,7 +571,7 @@ class AlacDecodeUtils {
                 case 16: {
 
                     for (int i = 0; i < outputsamples; i++) {
-                        int sample = alac.outputSamplesBufferA[i];
+                        int sample = alac.getOutputSamplesBufferA()[i];
                         outbuffer[i * alac.getNumChannels()] = sample;
 
                         /*
@@ -586,7 +586,7 @@ class AlacDecodeUtils {
                 }
                 case 24: {
                     for (int i = 0; i < outputsamples; i++) {
-                        int sample = alac.outputSamplesBufferA[i];
+                        int sample = alac.getOutputSamplesBufferA()[i];
 
                         if (uncompressed_bytes != 0) {
                             sample = sample << uncompressed_bytes * 8;
@@ -703,7 +703,7 @@ class AlacDecodeUtils {
 
                 if (prediction_type_a == 0) { // adaptive fir
 
-                    alac.outputSamplesBufferA = predictor_decompress_fir_adapt(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a);
+                    alac.setOutputSamplesBufferA(predictor_decompress_fir_adapt(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a));
 
                 } else { // see mono case
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
@@ -713,7 +713,7 @@ class AlacDecodeUtils {
                 entropy_rice_decode(alac, alac.getPredictErrorBufferB(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_b * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
 
                 if (prediction_type_b == 0) { // adaptive fir
-                    alac.outputSamplesBufferB = predictor_decompress_fir_adapt(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b);
+                    alac.setOutputSamplesBufferB(predictor_decompress_fir_adapt(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));
                 } else {
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_b);
                 }
@@ -730,8 +730,8 @@ class AlacDecodeUtils {
                         audiobits_a = audiobits_a << bitsmove >> bitsmove;
                         audiobits_b = audiobits_b << bitsmove >> bitsmove;
 
-                        alac.outputSamplesBufferA[i] = audiobits_a;
-                        alac.outputSamplesBufferB[i] = audiobits_b;
+                        alac.getOutputSamplesBufferA()[i] = audiobits_a;
+                        alac.getOutputSamplesBufferB()[i] = audiobits_b;
                     }
                 } else {
                     int m = 1 << 24 - 1;
@@ -746,8 +746,8 @@ class AlacDecodeUtils {
                         x = audiobits_b & (1 << 24) - 1;
                         audiobits_b = (x ^ m) - m;        // sign extend 24 bits
 
-                        alac.outputSamplesBufferA[i] = audiobits_a;
-                        alac.outputSamplesBufferB[i] = audiobits_b;
+                        alac.getOutputSamplesBufferA()[i] = audiobits_a;
+                        alac.getOutputSamplesBufferB()[i] = audiobits_b;
                     }
                 }
                 uncompressed_bytes = 0; // always 0 for uncompressed
@@ -757,11 +757,11 @@ class AlacDecodeUtils {
 
             switch (alac.getSampleSizeRaw()) {
                 case 16: {
-                    deinterlace_16(alac.outputSamplesBufferA, alac.outputSamplesBufferB, outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace_16(alac.getOutputSamplesBufferA(), alac.getOutputSamplesBufferB(), outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 24: {
-                    deinterlace_24(alac.outputSamplesBufferA, alac.outputSamplesBufferB, uncompressed_bytes, alac.getUncompressedBytesBufferA(), alac.getUncompressedBytesBufferB(), outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace_24(alac.getOutputSamplesBufferA(), alac.getOutputSamplesBufferB(), uncompressed_bytes, alac.getUncompressedBytesBufferA(), alac.getUncompressedBytesBufferB(), outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 20:
