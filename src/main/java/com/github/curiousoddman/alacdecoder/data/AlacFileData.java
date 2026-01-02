@@ -12,7 +12,7 @@ package com.github.curiousoddman.alacdecoder.data;
 
 import lombok.Data;
 
-import static com.github.curiousoddman.alacdecoder.AlacDecodeUtils.countLeadingZeros;
+import static com.github.curiousoddman.alacdecoder.AlacDecodeUtils.*;
 
 @Data
 public class AlacFileData {
@@ -242,5 +242,332 @@ public class AlacFileData {
 
             outputCount++;
         }
+    }
+
+
+    public int decodeFrame(byte[] inbuffer, int[] outbuffer) {
+        int outputsamples = getMaxSamplesPerFrame();
+
+        /* setup the stream */
+        setInputBuffer(inbuffer);
+        setInputBufferBitAccumulator(0);
+        setIbIdx(0);
+
+        int channels = readbits(3);
+
+        int outputsize = outputsamples * getBytesPerSample();
+
+        if (channels == 0) // 1 channel
+        {
+            /* 2^result = something to do with output waiting.
+             * perhaps matters if we read > 1 frame in a pass?
+             */
+            readbits(4);
+
+            readbits(12); // unknown, skip 12 bits
+
+            int hassize = readbits(1); // the output sample size is stored soon
+
+            int uncompressed_bytes = readbits(2); // number of bytes in the (compressed) stream that are not compressed
+
+            int isnotcompressed = readbits(1); // whether the frame is compressed
+
+            if (hassize != 0) {
+                /* now read the number of samples,
+                 * as a 32bit integer */
+                outputsamples = readbits(32);
+                outputsize = outputsamples * getBytesPerSample();
+            }
+
+            int readsamplesize = getSampleSizeRaw() - uncompressed_bytes * 8;
+
+            if (isnotcompressed == 0) { // so it is compressed
+                int[] predictor_coef_table = getPredictorCoefTable();
+
+                /* skip 16 bits, not sure what they are. seem to be used in
+                 * two channel case */
+                readbits(8);
+                readbits(8);
+
+                int prediction_type = readbits(4);
+                int prediction_quantitization = readbits(4);
+
+                int ricemodifier = readbits(3);
+                int predictor_coef_num = readbits(5);
+
+                /* read the predictor table */
+
+                int i;
+                for (i = 0; i < predictor_coef_num; i++) {
+                    int tempPred = readbits(16);
+                    if (tempPred > 32767) {
+                        // the predictor coef table values are only 16 bit signed
+                        tempPred = tempPred - 65536;
+                    }
+
+                    predictor_coef_table[i] = tempPred;
+                }
+
+                if (uncompressed_bytes != 0) {
+                    for (i = 0; i < outputsamples; i++) {
+                        getUncompressedBytesBufferA()[i] = readbits(uncompressed_bytes * 8);
+                    }
+                }
+
+
+                entropyRiceDecode(getPredictErrorBufferA(), outputsamples, readsamplesize, ricemodifier * (getRiceHistorymult() / 4));
+
+                if (prediction_type == 0) { // adaptive fir
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization));
+                } else {
+                    System.err.println("FIXME: unhandled predicition type: " + prediction_type);
+
+                    /* i think the only other prediction type (or perhaps this is just a
+                     * boolean?) runs adaptive fir twice.. like:
+                     * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
+                     * predictor_decompress_fir_adapt(predictor_error, outputsamples ...)
+                     * little strange..
+                     */
+                }
+
+            } else { // not compressed, easy case
+                if (getSampleSizeRaw() <= 16) {
+                    for (int i = 0; i < outputsamples; i++) {
+                        int audiobits = readbits(getSampleSizeRaw());
+                        int bitsmove = 32 - getSampleSizeRaw();
+
+                        audiobits = audiobits << bitsmove >> bitsmove;
+
+                        getOutputSamplesBufferA()[i] = audiobits;
+                    }
+                } else {
+                    int m = 1 << 24 - 1;
+                    for (int i = 0; i < outputsamples; i++) {
+
+                        int audiobits = getAudiobits();
+                        int x = audiobits & (1 << 24) - 1;
+                        audiobits = (x ^ m) - m;    // sign extend 24 bits
+
+                        getOutputSamplesBufferA()[i] = audiobits;
+                    }
+                }
+                uncompressed_bytes = 0; // always 0 for uncompressed
+            }
+
+            switch (getSampleSizeRaw()) {
+                case 16: {
+
+                    for (int i = 0; i < outputsamples; i++) {
+                        int sample = getOutputSamplesBufferA()[i];
+                        outbuffer[i * getNumChannels()] = sample;
+
+                        /*
+                         ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
+                         ** in this case we create a stereo file where one of the channels is silent. If mono and 1 channel this value
+                         ** will be overwritten in the next iteration
+                         */
+
+                        outbuffer[i * getNumChannels() + 1] = 0;
+                    }
+                    break;
+                }
+                case 24: {
+                    for (int i = 0; i < outputsamples; i++) {
+                        int sample = getOutputSamplesBufferA()[i];
+
+                        if (uncompressed_bytes != 0) {
+                            sample = sample << uncompressed_bytes * 8;
+                            int mask = ~(0xFFFFFFFF << uncompressed_bytes * 8);
+                            sample = sample | getUncompressedBytesBufferA()[i] & mask;
+                        }
+
+                        outbuffer[i * getNumChannels() * 3] = sample & 0xFF;
+                        outbuffer[i * getNumChannels() * 3 + 1] = sample >> 8 & 0xFF;
+                        outbuffer[i * getNumChannels() * 3 + 2] = sample >> 16 & 0xFF;
+
+                        /*
+                         ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
+                         ** in this case we create a stereo file where one of the channels is silent. If mono and 1 channel this value
+                         ** will be overwritten in the next iteration
+                         */
+
+                        outbuffer[i * getNumChannels() * 3 + 3] = 0;
+                        outbuffer[i * getNumChannels() * 3 + 4] = 0;
+                        outbuffer[i * getNumChannels() * 3 + 5] = 0;
+
+                    }
+                    break;
+                }
+                case 20:
+                case 32:
+                    System.err.println("FIXME: unimplemented sample size " + getSampleSizeRaw());
+                default:
+
+            }
+        } else if (channels == 1) // 2 channels
+        {
+
+            /* 2^result = something to do with output waiting.
+             * perhaps matters if we read > 1 frame in a pass?
+             */
+            readbits(4);
+
+            readbits(12); // unknown, skip 12 bits
+
+            int hassize = readbits(1); // the output sample size is stored soon
+
+            int uncompressed_bytes = readbits(2); // the number of bytes in the (compressed) stream that are not compressed
+
+            int isnotcompressed = readbits(1); // whether the frame is compressed
+
+            if (hassize != 0) {
+                /* now read the number of samples,
+                 * as a 32bit integer */
+                outputsamples = readbits(32);
+                outputsize = outputsamples * getBytesPerSample();
+            }
+
+            int readsamplesize = getSampleSizeRaw() - uncompressed_bytes * 8 + 1;
+
+            int interlacing_leftweight;
+            int interlacing_shift;
+            if (isnotcompressed == 0) { // compressed
+                int[] predictor_coef_table_a = getPredictorCoefTableA();
+
+                int[] predictor_coef_table_b = getPredictorCoefTableB();
+
+                interlacing_shift = readbits(8);
+                interlacing_leftweight = readbits(8);
+
+                /* ******* channel 1 ***********/
+                int prediction_type_a = readbits(4);
+                int prediction_quantitization_a = readbits(4);
+
+                int ricemodifier_a = readbits(3);
+                int predictor_coef_num_a = readbits(5);
+
+                /* read the predictor table */
+
+                int tempPred;
+                for (int i = 0; i < predictor_coef_num_a; i++) {
+                    tempPred = readbits(16);
+                    if (tempPred > 32767) {
+                        // the predictor coef table values are only 16 bit signed
+                        tempPred = tempPred - 65536;
+                    }
+                    predictor_coef_table_a[i] = tempPred;
+                }
+
+                /* ******* channel 2 *********/
+                int prediction_type_b = readbits(4);
+                int prediction_quantitization_b = readbits(4);
+
+                int ricemodifier_b = readbits(3);
+                int predictor_coef_num_b = readbits(5);
+
+                /* read the predictor table */
+
+                for (int i = 0; i < predictor_coef_num_b; i++) {
+                    tempPred = readbits(16);
+                    if (tempPred > 32767) {
+                        // the predictor coef table values are only 16 bit signed
+                        tempPred = tempPred - 65536;
+                    }
+                    predictor_coef_table_b[i] = tempPred;
+                }
+
+                /* ********************/
+                if (uncompressed_bytes != 0) { // see mono case
+                    for (int i = 0; i < outputsamples; i++) {
+                        getUncompressedBytesBufferA()[i] = readbits(uncompressed_bytes * 8);
+                        getUncompressedBytesBufferB()[i] = readbits(uncompressed_bytes * 8);
+                    }
+                }
+
+                /* channel 1 */
+
+                entropyRiceDecode(getPredictErrorBufferA(), outputsamples, readsamplesize, ricemodifier_a * (getRiceHistorymult() / 4));
+
+                if (prediction_type_a == 0) { // adaptive fir
+
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a));
+
+                } else { // see mono case
+                    System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
+                }
+
+                /* channel 2 */
+                entropyRiceDecode(getPredictErrorBufferB(), outputsamples, readsamplesize, ricemodifier_b * (getRiceHistorymult() / 4));
+
+                if (prediction_type_b == 0) { // adaptive fir
+                    setOutputSamplesBufferB(predictorDecompressFirAdapt(getPredictErrorBufferB(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));
+                } else {
+                    System.err.println("FIXME: unhandled predicition type: " + prediction_type_b);
+                }
+            } else { // not compressed, easy case
+                if (getSampleSizeRaw() <= 16) {
+
+                    for (int i = 0; i < outputsamples; i++) {
+
+                        int audiobits_a = readbits(getSampleSizeRaw());
+                        int audiobits_b = readbits(getSampleSizeRaw());
+
+                        int bitsmove = 32 - getSampleSizeRaw();
+
+                        audiobits_a = audiobits_a << bitsmove >> bitsmove;
+                        audiobits_b = audiobits_b << bitsmove >> bitsmove;
+
+                        getOutputSamplesBufferA()[i] = audiobits_a;
+                        getOutputSamplesBufferB()[i] = audiobits_b;
+                    }
+                } else {
+                    int m = 1 << 24 - 1;
+
+                    for (int i = 0; i < outputsamples; i++) {
+
+                        int audiobits_a = getAudiobits();
+                        int x = audiobits_a & (1 << 24) - 1;
+                        audiobits_a = (x ^ m) - m;        // sign extend 24 bits
+
+                        int audiobits_b = getAudiobits();
+                        x = audiobits_b & (1 << 24) - 1;
+                        audiobits_b = (x ^ m) - m;        // sign extend 24 bits
+
+                        getOutputSamplesBufferA()[i] = audiobits_a;
+                        getOutputSamplesBufferB()[i] = audiobits_b;
+                    }
+                }
+                uncompressed_bytes = 0; // always 0 for uncompressed
+                interlacing_shift = 0;
+                interlacing_leftweight = 0;
+            }
+
+            switch (getSampleSizeRaw()) {
+                case 16: {
+                    deinterlace16(getOutputSamplesBufferA(), getOutputSamplesBufferB(), outbuffer, getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    break;
+                }
+                case 24: {
+                    deinterlace24(getOutputSamplesBufferA(), getOutputSamplesBufferB(), uncompressed_bytes, getUncompressedBytesBufferA(), getUncompressedBytesBufferB(), outbuffer, getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    break;
+                }
+                case 20:
+                case 32:
+                    System.err.println("FIXME: unimplemented sample size " + getSampleSizeRaw());
+
+                default:
+
+            }
+        }
+        return outputsize;
+    }
+
+    private int getAudiobits() {
+        int audiobits = readbits(16);
+        /* special case of sign extension..
+         * as we'll be ORing the low 16bits into this */
+        audiobits = audiobits << getSampleSizeRaw() - 16;
+        audiobits = audiobits | readbits(getSampleSizeRaw() - 16);
+        return audiobits;
     }
 }

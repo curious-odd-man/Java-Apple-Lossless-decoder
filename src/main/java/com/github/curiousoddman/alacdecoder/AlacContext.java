@@ -46,7 +46,7 @@ public class AlacContext implements AutoCloseable {
 
         /* now fetch */
 
-        int outputBytes = AlacDecodeUtils.decodeFrame(getAlacFileData(), readBuffer, destBuffer);
+        int outputBytes = alacFileData.decodeFrame(readBuffer, destBuffer);
 
         setCurrentSampleBlock(getCurrentSampleBlock() + 1);
         outputBytes -= getOffset() * getBytesPerSample();
