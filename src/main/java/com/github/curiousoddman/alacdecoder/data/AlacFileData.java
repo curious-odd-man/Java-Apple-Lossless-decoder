@@ -49,8 +49,6 @@ public class AlacFileData {
     private int ibIdx = 0;
     private int inputBufferBitAccumulator = 0; /* used so we can do arbitary
 						bit reads */
-    private final LeadingZeros lz = new LeadingZeros();
-
     private int[] outputSamplesBufferA = new int[BUFFER_SIZE];
     private int[] outputSamplesBufferB = new int[BUFFER_SIZE];
 
@@ -194,7 +192,7 @@ public class AlacFileData {
         int signModifier = 0;
 
         while (outputCount < outputSize) {
-            int k = 31 - riceKmodifierInt - countLeadingZeros((history >> 9) + 3, getLz());
+            int k = 31 - riceKmodifierInt - countLeadingZeros((history >> 9) + 3);
 
             if (k < 0) {
                 k += riceKmodifierInt;
@@ -224,7 +222,7 @@ public class AlacFileData {
             if (history < 128 && outputCount + 1 < outputSize) {
                 signModifier = 1;
 
-                k = countLeadingZeros(history, getLz()) + (history + 16) / 64 - 24;
+                k = countLeadingZeros(history) + (history + 16) / 64 - 24;
 
                 // note: blockSize is always 16bit
                 int blockSize = entropyDecodeValue(16, k, riceKmodifierMask);

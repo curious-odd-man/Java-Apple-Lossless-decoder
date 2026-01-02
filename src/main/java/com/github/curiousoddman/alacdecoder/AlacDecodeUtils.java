@@ -10,11 +10,8 @@
  */
 package com.github.curiousoddman.alacdecoder;
 
-import com.github.curiousoddman.alacdecoder.data.LeadingZeros;
-
 public class AlacDecodeUtils {
-    public static void countLeadingZerosExtra(int curbyte, int output, LeadingZeros lz) {
-
+    public static int countLeadingZerosExtra(int curbyte, int output) {
         if ((curbyte & 0xf0) == 0) {
             output += 4;
         } else {
@@ -22,71 +19,48 @@ public class AlacDecodeUtils {
         }
 
         if ((curbyte & 0x8) != 0) {
-            lz.setOutput(output);
-            lz.setCurbyte(curbyte);
-            return;
+            return output;
         }
         if ((curbyte & 0x4) != 0) {
-            lz.setOutput(output + 1);
-            lz.setCurbyte(curbyte);
-            return;
+            return output + 1;
         }
         if ((curbyte & 0x2) != 0) {
-            lz.setOutput(output + 2);
-            lz.setCurbyte(curbyte);
-            return;
+            return output + 2;
         }
         if ((curbyte & 0x1) != 0) {
-            lz.setOutput(output + 3);
-            lz.setCurbyte(curbyte);
-            return;
+            return output + 3;
         }
 
         /* shouldn't get here: */
-
-        lz.setOutput(output + 4);
-        lz.setCurbyte(curbyte);
-
+        return output + 4;
     }
 
-    public static int countLeadingZeros(int input, LeadingZeros lz) {
+    public static int countLeadingZeros(int input) {
         int output = 0;
 
         int curbyte = input >> 24;
         if (curbyte != 0) {
-            countLeadingZerosExtra(curbyte, output, lz);
-            output = lz.getOutput();
-            return output;
+            return countLeadingZerosExtra(curbyte, output);
         }
         output += 8;
 
         curbyte = input >> 16;
         if ((curbyte & 0xFF) != 0) {
-            countLeadingZerosExtra(curbyte, output, lz);
-            output = lz.getOutput();
-
-            return output;
+            return countLeadingZerosExtra(curbyte, output);
         }
         output += 8;
 
         curbyte = input >> 8;
         if ((curbyte & 0xFF) != 0) {
-            countLeadingZerosExtra(curbyte, output, lz);
-            output = lz.getOutput();
-
-            return output;
+            return countLeadingZerosExtra(curbyte, output);
         }
         output += 8;
 
         curbyte = input;
         if ((curbyte & 0xFF) != 0) {
-            countLeadingZerosExtra(curbyte, output, lz);
-            output = lz.getOutput();
-
-            return output;
+            return countLeadingZerosExtra(curbyte, output);
         }
         output += 8;
-
         return output;
     }
 
