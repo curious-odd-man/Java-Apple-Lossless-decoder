@@ -302,7 +302,7 @@ public class QTMovie {
             } else if (subChunkId == makeFourCC(115, 116, 115, 99)) {  // fourcc equals stsc
                 read_chunk_stsc();
             } else if (subChunkId == makeFourCC(115, 116, 99, 111)) {  // fourcc equals stco
-                read_chunk_stco();
+                readChunkStco();
             } else {
                 throw new UnsupportedFormatException("(stbl) unknown chunk id: " + splitFourCC(subChunkId));
             }
@@ -314,16 +314,13 @@ public class QTMovie {
     /*
      * chunk to offset box
      */
-    private void read_chunk_stco() throws IOException {
-        //skip header and size
-        DataInputStreamWrapper stream = qtstream;
-        stream.skip(4);
+    private void readChunkStco() throws IOException {
+        qtstream.skip(4);
+        int numEntries = qtstream.readUint32();
 
-        int num_entries = stream.readUint32();
-
-        res.setStco(new int[num_entries]);
-        for (int i = 0; i < num_entries; i++) {
-            res.getStco()[i] = stream.readUint32();
+        res.setStco(new int[numEntries]);
+        for (int i = 0; i < numEntries; i++) {
+            res.getStco()[i] = qtstream.readUint32();
         }
     }
 
