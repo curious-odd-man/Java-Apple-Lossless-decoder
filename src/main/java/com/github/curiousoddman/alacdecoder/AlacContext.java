@@ -56,9 +56,6 @@ public class AlacContext implements AutoCloseable {
         return outputBytes;
     }
 
-    // Get total number of samples contained in the Apple Lossless file, or -1 if unknown
-
-
     /**
      * sets position in pcm samples
      *

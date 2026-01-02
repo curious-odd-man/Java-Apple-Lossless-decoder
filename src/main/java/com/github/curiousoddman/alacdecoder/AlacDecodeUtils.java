@@ -494,7 +494,6 @@ class AlacDecodeUtils {
         buffer_out[i * numchannels * 3 + 5] = ((right >> 16) & 0xFF);
     }
 
-
     public static int decode_frame(AlacFileData alac, byte[] inbuffer, int[] outbuffer) {
         int outputsamples = alac.setinfo_max_samples_per_frame;
 
@@ -833,23 +832,6 @@ class AlacDecodeUtils {
             }
         }
         return outputsize;
-    }
-
-    private static void another_duplicate_code(AlacFileData alac, int outputsamples, int readsamplesize, int ricemodifier, int[] predictor_coef_table, int predictor_coef_num, int prediction_type, int prediction_quantitization) {
-        entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
-
-        if (prediction_type == 0) { // adaptive fir
-            alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
-        } else {
-            System.err.println("FIXME: unhandled predicition type: " + prediction_type);
-
-            /* i think the only other prediction type (or perhaps this is just a
-             * boolean?) runs adaptive fir twice.. like:
-             * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
-             * predictor_decompress_fir_adapt(predictor_error, outputsamples ...)
-             * little strange..
-             */
-        }
     }
 
     public static AlacFileData create_alac(int samplesize, int numchannels) {

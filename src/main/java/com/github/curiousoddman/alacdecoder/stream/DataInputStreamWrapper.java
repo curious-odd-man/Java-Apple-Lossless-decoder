@@ -70,13 +70,6 @@ public class DataInputStreamWrapper {
         return v;
     }
 
-    public int readUint8() throws IOException {
-        stream.read(readBuf, 0, 1);
-        int v = (readBuf[0] & 0xff);
-        currentPos++;
-        return v;
-    }
-
     public void skip(int skip) throws IOException {
         if (skip < 0) {
             throw new IOException("Cannot skip backwards...");
