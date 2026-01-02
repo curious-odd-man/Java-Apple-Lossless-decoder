@@ -1,12 +1,14 @@
 package com.github.curiousoddman.alacdecoder;
 
 
+import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import static com.github.curiousoddman.alacdecoder.DemuxUtils.makeFourCC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,7 +33,7 @@ class QTMovieTest {
 
             assertEquals(data.length - 8, streamWrapper.getCurrentPos());
             verify(streamWrapper).readUint32();
-            verify(streamWrapper).skipBytes(4);
+            verify(streamWrapper).skip(4);
         }
     }
 
@@ -39,14 +41,6 @@ class QTMovieTest {
     public void testReadChunkFtyp_invalidType() throws IOException {
         // Prepare data with an invalid type
         int invalidType = makeFourCC(0, 0, 0, 0);
-        ByteArrayInputStream byteStream = new ByteArrayInputStream(new byte[]{
-                (byte) ((invalidType >> 24) & 0xFF),
-                (byte) ((invalidType >> 16) & 0xFF),
-                (byte) ((invalidType >> 8) & 0xFF),
-                (byte) (invalidType & 0xFF),
-                // Add remaining bytes if necessary
-        });
-
         DataInputStreamWrapper mockStream = mock(DataInputStreamWrapper.class);
         when(mockStream.readUint32()).thenReturn(invalidType);
 
@@ -55,6 +49,22 @@ class QTMovieTest {
         // Call the method
         assertThrows(UnsupportedFormatException.class,
                 () -> qtmovie.readChunkFtyp(8));
+    }
+
+    @Test
+    public void testReadChunkHdlr_NormalCase() throws IOException {
+        int chunkLen = 50; // example chunk length
+
+        InputStream mock = mock();
+        when(mock.skip(anyLong())).thenAnswer(invocation -> (long)invocation.getArgument(0));
+        DataInputStream dataInputStream = new AlacInputStream(mock);
+        DataInputStreamWrapper streamWrapper = new DataInputStreamWrapper(dataInputStream);
+        QTMovie qtmovie = new QTMovie(streamWrapper);
+
+        // Call the method
+        qtmovie.readChunkHandler(chunkLen);
+
+        assertEquals(chunkLen - 8, streamWrapper.getCurrentPos());
     }
 
     private static byte[] getBytes() {
@@ -81,5 +91,4 @@ class QTMovieTest {
                 (byte) (brand2 & 0xFF)
         };
     }
-
 }

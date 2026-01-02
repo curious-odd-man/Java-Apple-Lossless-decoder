@@ -106,70 +106,33 @@ public class QTMovie {
         /* compatible brands */
         /* unused */
         /*fourcc_t cbrand =*/
-        qtstream.skipBytes(sizeRemaining);
+        qtstream.skip(sizeRemaining);
     }
 
-    void read_chunk_tkhd(int chunk_len) throws IOException {
-        /* don't need anything from here atm, skip */
-        read_chunk_edts(chunk_len);
+    void readChunkTkhd(int chunkLen) throws IOException {
+        skipChunk(chunkLen);
     }
 
-    void read_chunk_mdhd(int chunk_len) throws IOException {
-        /* don't need anything from here atm, skip */
-        read_chunk_edts(chunk_len);
+    void readChunkMdhd(int chunkLen) throws IOException {
+        skipChunk(chunkLen);
     }
 
-    void read_chunk_edts(int chunk_len) throws IOException {
-        /* don't need anything from here atm, skip */
-        int size_remaining = chunk_len - 8; // FIXME WRONG
-
-        qtstream.skip(size_remaining);
+    void readChunkEdts(int chunkLen) throws IOException {
+        skipChunk(chunkLen);
     }
 
-    void read_chunk_elst(int chunk_len) throws IOException {
+    private void skipChunk(int chunkLen) throws IOException {
         /* don't need anything from here atm, skip */
-        read_chunk_edts(chunk_len);
+        qtstream.skip(chunkLen - 8);
+    }
+
+    void readChunkElst(int chunkLen) throws IOException {
+        skipChunk(chunkLen);
     }
 
     /* media handler inside mdia */
-    void read_chunk_hdlr(int chunk_len) throws IOException {
-
-        /* version */
-        qtstream.readUint8();
-        // FIXME WRONG
-        int size_remaining = chunk_len - 8;
-        size_remaining -= 1;
-        /* flags */
-        qtstream.readUint8();
-        qtstream.readUint8();
-        qtstream.readUint8();
-        size_remaining -= 3;
-
-        /* component type */
-        int comptype = qtstream.readUint32();
-        int compsubtype = qtstream.readUint32();
-        size_remaining -= 8;
-
-        /* component manufacturer */
-        qtstream.readUint32();
-        size_remaining -= 4;
-
-        /* flags */
-        qtstream.readUint32();
-        qtstream.readUint32();
-        size_remaining -= 8;
-
-        /* name */
-        int strlen = qtstream.readUint8();
-
-        /*
-         ** rewrote this to handle case where we actually read more than required
-         ** so here we work out how much we need to read first
-         */
-
-        size_remaining -= 1;
-
-        qtstream.skip(size_remaining);
+    void readChunkHandler(int chunkLen) throws IOException {
+        skipChunk(chunkLen);
     }
 
     int read_chunk_stsd() throws IOException {
@@ -574,10 +537,10 @@ public class QTMovie {
 
             if (sub_chunk_id == makeFourCC(109, 100, 104, 100))    // fourcc equals mdhd
             {
-                read_chunk_mdhd(sub_chunk_len);
+                readChunkMdhd(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(104, 100, 108, 114))    // fourcc equals hdlr
             {
-                read_chunk_hdlr(sub_chunk_len);
+                readChunkHandler(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(109, 105, 110, 102))    // fourcc equals minf
             {
                 if (read_chunk_minf(sub_chunk_len) == 0) return 0;
@@ -615,13 +578,13 @@ public class QTMovie {
 
             if (sub_chunk_id == makeFourCC(116, 107, 104, 100))    // fourcc equals tkhd
             {
-                read_chunk_tkhd(sub_chunk_len);
+                readChunkTkhd(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(109, 100, 105, 97))    // fourcc equals mdia
             {
                 if (read_chunk_mdia(sub_chunk_len) == 0) return 0;
             } else if (sub_chunk_id == makeFourCC(101, 100, 116, 115))    // fourcc equals edts
             {
-                read_chunk_edts(sub_chunk_len);
+                readChunkEdts(sub_chunk_len);
             } else {
                 System.err.println("(trak) unknown chunk id: " + splitFourCC(sub_chunk_id));
                 return 0;
@@ -636,19 +599,19 @@ public class QTMovie {
     /* 'mvhd' movie header atom */
     void read_chunk_mvhd(int chunk_len) throws IOException {
         /* don't need anything from here atm, skip */
-        read_chunk_edts(chunk_len);
+        readChunkEdts(chunk_len);
     }
 
     /* 'udta' user data.. contains tag info */
     void read_chunk_udta(int chunk_len) throws IOException {
         /* don't need anything from here atm, skip */
-        read_chunk_edts(chunk_len);
+        readChunkEdts(chunk_len);
     }
 
     /* 'iods' */
     void read_chunk_iods(int chunk_len) throws IOException {
         /* don't need anything from here atm, skip */
-        read_chunk_edts(chunk_len);
+        readChunkEdts(chunk_len);
     }
 
     /* 'moov' movie atom - contains other atoms */
@@ -683,7 +646,7 @@ public class QTMovie {
                 read_chunk_udta(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(101, 108, 115, 116))    // fourcc equals elst
             {
-                read_chunk_elst(sub_chunk_len);
+                readChunkElst(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(105, 111, 100, 115))    // fourcc equals iods
             {
                 read_chunk_iods(sub_chunk_len);
