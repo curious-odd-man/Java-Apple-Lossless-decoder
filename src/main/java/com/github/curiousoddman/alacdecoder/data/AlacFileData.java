@@ -36,7 +36,7 @@ public class AlacFileData {
     private int maxSamplesPerFrame = 0; // 0x1000 = 4096
     private int sevenA = 0; // 0x00
     private int sampleSizeRaw = 0; // 0x10
-    private int riceHistorymult = 0; // 0x28
+    private int riceHistoryMult = 0; // 0x28
     private int riceInitialhistory = 0; // 0x0a
     private int riceKmodifier = 0; // 0x0e
     private int sevenF = 0; // 0x02
@@ -75,7 +75,7 @@ public class AlacFileData {
         ptrIndex += 1;
         sampleSizeRaw = inputBuffer[ptrIndex];
         ptrIndex += 1;
-        riceHistorymult = inputBuffer[ptrIndex] & 0xff;
+        riceHistoryMult = inputBuffer[ptrIndex] & 0xff;
         ptrIndex += 1;
         riceInitialhistory = inputBuffer[ptrIndex] & 0xff;
         ptrIndex += 1;
@@ -284,7 +284,7 @@ public class AlacFileData {
                 readbits(8);
 
                 int predictionType = readbits(4);
-                int predictionQuantitization = readbits(4);
+                int predictionQuantization = readbits(4);
 
                 int riceModifier = readbits(3);
                 int predictorCoefNum = readbits(5);
@@ -308,10 +308,10 @@ public class AlacFileData {
                     }
                 }
 
-                entropyRiceDecode(predictErrorBufferA, outputSamples, readSampleSize, riceModifier * (getRiceHistorymult() / 4));
+                entropyRiceDecode(predictErrorBufferA, outputSamples, readSampleSize, riceModifier * (riceHistoryMult / 4));
 
                 if (predictionType == 0) { // adaptive fir
-                    setOutputSamplesBufferA(predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantitization));
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantization));
                 } else {
                     log.error("FIXME: unhandled predicition type: {}", predictionType);
 
@@ -326,7 +326,7 @@ public class AlacFileData {
             } else { // not compressed, easy case
                 if (sampleSizeRaw <= 16) {
                     for (int i = 0; i < outputSamples; i++) {
-                        int audiobits = readbits(getSampleSizeRaw());
+                        int audiobits = readbits(sampleSizeRaw);
                         int bitsmove = 32 - sampleSizeRaw;
 
                         audiobits = audiobits << bitsmove >> bitsmove;
@@ -393,125 +393,113 @@ public class AlacFileData {
                 }
                 case 20:
                 case 32:
-                    System.err.println("FIXME: unimplemented sample size " + getSampleSizeRaw());
+                    log.error("FIXME: unimplemented sample size {}", getSampleSizeRaw());
                 default:
 
             }
-        } else if (channels == 1) // 2 channels
-        {
-
+        } else if (channels == 1) { // 2 channels
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
             readbits(4);
-
             readbits(12); // unknown, skip 12 bits
 
-            int hassize = readbits(1); // the output sample size is stored soon
+            int hasSize = readbits(1); // the output sample size is stored soon
+            int uncompressedBytes = readbits(2); // the number of bytes in the (compressed) stream that are not compressed
+            int isNotCompressed = readbits(1); // whether the frame is compressed
 
-            int uncompressed_bytes = readbits(2); // the number of bytes in the (compressed) stream that are not compressed
-
-            int isnotcompressed = readbits(1); // whether the frame is compressed
-
-            if (hassize != 0) {
+            if (hasSize != 0) {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputSamples = readbits(32);
                 outputSize = outputSamples * bytesPerSample;
             }
 
-            int readsamplesize = sampleSizeRaw - uncompressed_bytes * 8 + 1;
+            int readSampleSize = sampleSizeRaw - uncompressedBytes * 8 + 1;
 
-            int interlacing_leftweight;
-            int interlacing_shift;
-            if (isnotcompressed == 0) { // compressed
-                int[] predictor_coef_table_a = getPredictorCoefTableA();
-
-                int[] predictor_coef_table_b = getPredictorCoefTableB();
-
-                interlacing_shift = readbits(8);
-                interlacing_leftweight = readbits(8);
+            int interlacingLeftWeight;
+            int interlacingShift;
+            if (isNotCompressed == 0) { // compressed
+                interlacingShift = readbits(8);
+                interlacingLeftWeight = readbits(8);
 
                 /* ******* channel 1 ***********/
-                int prediction_type_a = readbits(4);
-                int prediction_quantitization_a = readbits(4);
+                int predictionTypeA = readbits(4);
+                int predictionQuantitizationA = readbits(4);
 
-                int ricemodifier_a = readbits(3);
-                int predictor_coef_num_a = readbits(5);
+                int ricemodifierA = readbits(3);
+                int predictorCoefNumA = readbits(5);
 
                 /* read the predictor table */
 
                 int tempPred;
-                for (int i = 0; i < predictor_coef_num_a; i++) {
+                for (int i = 0; i < predictorCoefNumA; i++) {
                     tempPred = readbits(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
                     }
-                    predictor_coef_table_a[i] = tempPred;
+                    predictorCoefTableA[i] = tempPred;
                 }
 
                 /* ******* channel 2 *********/
-                int prediction_type_b = readbits(4);
-                int prediction_quantitization_b = readbits(4);
+                int predictionTypeB = readbits(4);
+                int predictionQuantitizationB = readbits(4);
 
-                int ricemodifier_b = readbits(3);
-                int predictor_coef_num_b = readbits(5);
+                int ricemodifierB = readbits(3);
+                int predictorCoefNumB = readbits(5);
 
                 /* read the predictor table */
 
-                for (int i = 0; i < predictor_coef_num_b; i++) {
+                for (int i = 0; i < predictorCoefNumB; i++) {
                     tempPred = readbits(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
                     }
-                    predictor_coef_table_b[i] = tempPred;
+                    predictorCoefTableB[i] = tempPred;
                 }
 
                 /* ********************/
-                if (uncompressed_bytes != 0) { // see mono case
+                if (uncompressedBytes != 0) { // see mono case
                     for (int i = 0; i < outputSamples; i++) {
-                        getUncompressedBytesBufferA()[i] = readbits(uncompressed_bytes * 8);
-                        getUncompressedBytesBufferB()[i] = readbits(uncompressed_bytes * 8);
+                        uncompressedBytesBufferA[i] = readbits(uncompressedBytes * 8);
+                        uncompressedBytesBufferB[i] = readbits(uncompressedBytes * 8);
                     }
                 }
 
                 /* channel 1 */
 
-                entropyRiceDecode(getPredictErrorBufferA(), outputSamples, readsamplesize, ricemodifier_a * (getRiceHistorymult() / 4));
+                entropyRiceDecode(predictErrorBufferA, outputSamples, readSampleSize, ricemodifierA * (riceHistoryMult / 4));
 
-                if (prediction_type_a == 0) { // adaptive fir
-
-                    setOutputSamplesBufferA(predictorDecompressFirAdapt(getPredictErrorBufferA(), outputSamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a));
-
+                if (predictionTypeA == 0) { // adaptive fir
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTableA, predictorCoefNumA, predictionQuantitizationA));
                 } else { // see mono case
-                    System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
+                    log.error("FIXME: unhandled predicition type: {}", predictionTypeA);
                 }
 
                 /* channel 2 */
-                entropyRiceDecode(getPredictErrorBufferB(), outputSamples, readsamplesize, ricemodifier_b * (getRiceHistorymult() / 4));
-
-                if (prediction_type_b == 0) { // adaptive fir
-                    setOutputSamplesBufferB(predictorDecompressFirAdapt(getPredictErrorBufferB(), outputSamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));
+                entropyRiceDecode(predictErrorBufferB, outputSamples, readSampleSize, ricemodifierB * (riceHistoryMult / 4));
+                if (predictionTypeB == 0) { // adaptive fir
+                    setOutputSamplesBufferB(predictorDecompressFirAdapt(predictErrorBufferB, outputSamples, readSampleSize, predictorCoefTableB, predictorCoefNumB, predictionQuantitizationB));
                 } else {
-                    System.err.println("FIXME: unhandled predicition type: " + prediction_type_b);
+                    log.error("FIXME: unhandled predicition type: {}", predictionTypeB);
                 }
             } else { // not compressed, easy case
                 if (sampleSizeRaw <= 16) {
 
                     for (int i = 0; i < outputSamples; i++) {
 
-                        int audiobits_a = readbits(getSampleSizeRaw());
-                        int audiobits_b = readbits(getSampleSizeRaw());
+                        int audiobits_a = readbits(sampleSizeRaw);
+                        int audiobits_b = readbits(sampleSizeRaw);
 
                         int bitsmove = 32 - sampleSizeRaw;
 
                         audiobits_a = audiobits_a << bitsmove >> bitsmove;
                         audiobits_b = audiobits_b << bitsmove >> bitsmove;
 
-                        getOutputSamplesBufferA()[i] = audiobits_a;
-                        getOutputSamplesBufferB()[i] = audiobits_b;
+                        outputSamplesBufferA[i] = audiobits_a;
+                        outputSamplesBufferB[i] = audiobits_b;
                     }
                 } else {
                     int m = 1 << 24 - 1;
@@ -526,30 +514,28 @@ public class AlacFileData {
                         x = audiobits_b & (1 << 24) - 1;
                         audiobits_b = (x ^ m) - m;        // sign extend 24 bits
 
-                        getOutputSamplesBufferA()[i] = audiobits_a;
-                        getOutputSamplesBufferB()[i] = audiobits_b;
+                        outputSamplesBufferA[i] = audiobits_a;
+                        outputSamplesBufferB[i] = audiobits_b;
                     }
                 }
-                uncompressed_bytes = 0; // always 0 for uncompressed
-                interlacing_shift = 0;
-                interlacing_leftweight = 0;
+                uncompressedBytes = 0; // always 0 for uncompressed
+                interlacingShift = 0;
+                interlacingLeftWeight = 0;
             }
 
             switch (getSampleSizeRaw()) {
                 case 16: {
-                    deinterlace16(getOutputSamplesBufferA(), getOutputSamplesBufferB(), outBuffer, numChannels, outputSamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace16(outputSamplesBufferA, outputSamplesBufferB, outBuffer, numChannels, outputSamples, interlacingShift, interlacingLeftWeight);
                     break;
                 }
                 case 24: {
-                    deinterlace24(getOutputSamplesBufferA(), getOutputSamplesBufferB(), uncompressed_bytes, getUncompressedBytesBufferA(), getUncompressedBytesBufferB(), outBuffer, numChannels, outputSamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace24(outputSamplesBufferA, outputSamplesBufferB, uncompressedBytes, uncompressedBytesBufferA, uncompressedBytesBufferA, outBuffer, numChannels, outputSamples, interlacingShift, interlacingLeftWeight);
                     break;
                 }
                 case 20:
                 case 32:
-                    log.error("FIXME: unimplemented sample size {}", getSampleSizeRaw());
-
+                    log.error("FIXME: unimplemented sample size {}", sampleSizeRaw);
                 default:
-
             }
         }
         return outputSize;
