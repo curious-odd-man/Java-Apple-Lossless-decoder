@@ -300,7 +300,7 @@ public class QTMovie {
             } else if (subChunkId == makeFourCC(115, 116, 115, 122)) { // fourcc equals stsz
                 readChunkStsz(subChunkLen);
             } else if (subChunkId == makeFourCC(115, 116, 115, 99)) {  // fourcc equals stsc
-                read_chunk_stsc();
+                readChunkStsc();
             } else if (subChunkId == makeFourCC(115, 116, 99, 111)) {  // fourcc equals stco
                 readChunkStco();
             } else {
@@ -327,19 +327,19 @@ public class QTMovie {
     /*
      * sample to chunk box
      */
-    private void read_chunk_stsc() throws IOException {
+    private void readChunkStsc() throws IOException {
         //skip header and size
-        DataInputStreamWrapper stream = qtstream;
         //skip version and other junk
-        stream.skip(4);
-        int num_entries = stream.readUint32();
-        res.setStsc(new ChunkInfo[num_entries]);
-        for (int i = 0; i < num_entries; i++) {
+        qtstream.skip(4);
+        int numEntries = qtstream.readUint32();
+        ChunkInfo[] chunkInfos = new ChunkInfo[numEntries];
+        res.setStsc(chunkInfos);
+        for (int i = 0; i < numEntries; i++) {
             ChunkInfo entry = new ChunkInfo();
-            entry.setFirstChunk(stream.readUint32());
-            entry.setSamplesPerChunk(stream.readUint32());
-            entry.setSampleDescIndex(stream.readUint32());
-            res.getStsc()[i] = entry;
+            entry.setFirstChunk(qtstream.readUint32());
+            entry.setSamplesPerChunk(qtstream.readUint32());
+            entry.setSampleDescIndex(qtstream.readUint32());
+            chunkInfos[i] = entry;
         }
     }
 
