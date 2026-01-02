@@ -204,13 +204,13 @@ public class QTMovie {
          ** sample rate
          */
         int ptrIndex = 29;    // position of bits per sample
-        res.setSampleSize((codecData[ptrIndex] & 0xff));
+        res.setSampleSize(codecData[ptrIndex] & 0xff);
 
         ptrIndex = 33;    // position of num of channels
-        res.setNumChannels((codecData[ptrIndex] & 0xff));
+        res.setNumChannels(codecData[ptrIndex] & 0xff);
 
         ptrIndex = 44;        // position of sample rate within codec data buffer
-        res.setSampleRate((((codecData[ptrIndex] & 0xff) << 24) | ((codecData[ptrIndex + 1] & 0xff) << 16) | ((codecData[ptrIndex + 2] & 0xff) << 8) | (codecData[ptrIndex + 3] & 0xff)));
+        res.setSampleRate((codecData[ptrIndex] & 0xff) << 24 | (codecData[ptrIndex + 1] & 0xff) << 16 | (codecData[ptrIndex + 2] & 0xff) << 8 | codecData[ptrIndex + 3] & 0xff);
 
         qtstream.skip(entryRemaining);
         if (res.getFormat() != makeFourCC(97, 108, 97, 99)) {        // "alac" ascii values
@@ -407,44 +407,28 @@ public class QTMovie {
     }
 
     /* 'trak' - a movie track - contains other atoms */
-    int read_chunk_trak(int chunk_len) throws IOException {
-        int size_remaining = chunk_len - 8; // FIXME WRONG
+    void readChunkTrak(int chunkLen) throws IOException {
+        int sizeRemaining = chunkLen - 8; // FIXME WRONG
 
-        while (size_remaining != 0) {
-            int sub_chunk_len;
-
-            try {
-                sub_chunk_len = (qtstream.readUint32());
-            } catch (Exception e) {
-                System.err.println("(read_chunk_trak) error reading sub_chunk_len - possibly number too large");
-                sub_chunk_len = 0;
+        while (sizeRemaining != 0) {
+            int subChunkLen = qtstream.readUint32();
+            if (subChunkLen <= 1 || subChunkLen > sizeRemaining) {
+                throw new UnsupportedFormatException("strange size for chunk inside trak");
             }
 
-            if (sub_chunk_len <= 1 || sub_chunk_len > size_remaining) {
-                System.err.println("strange size for chunk inside trak");
-                return 0;
-            }
-
-            int sub_chunk_id = qtstream.readUint32();
-
-            if (sub_chunk_id == makeFourCC(116, 107, 104, 100))    // fourcc equals tkhd
-            {
-                readChunkTkhd(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(109, 100, 105, 97))    // fourcc equals mdia
-            {
-                readChunkMdia(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(101, 100, 116, 115))    // fourcc equals edts
-            {
-                readChunkEdts(sub_chunk_len);
+            int subChunkId = qtstream.readUint32();
+            if (subChunkId == makeFourCC(116, 107, 104, 100)) {  // fourcc equals tkhd
+                readChunkTkhd(subChunkLen);
+            } else if (subChunkId == makeFourCC(109, 100, 105, 97)) {  // fourcc equals mdia
+                readChunkMdia(subChunkLen);
+            } else if (subChunkId == makeFourCC(101, 100, 116, 115)) {   // fourcc equals edts
+                readChunkEdts(subChunkLen);
             } else {
-                System.err.println("(trak) unknown chunk id: " + splitFourCC(sub_chunk_id));
-                return 0;
+                throw new UnsupportedFormatException("(trak) unknown chunk id: " + splitFourCC(subChunkId));
             }
 
-            size_remaining -= sub_chunk_len;
+            sizeRemaining -= subChunkLen;
         }
-
-        return 1;
     }
 
     /* 'mvhd' movie header atom */
@@ -473,7 +457,7 @@ public class QTMovie {
             int sub_chunk_len;
 
             try {
-                sub_chunk_len = (qtstream.readUint32());
+                sub_chunk_len = qtstream.readUint32();
             } catch (Exception e) {
                 System.err.println("(read_chunk_moov) error reading sub_chunk_len - possibly number too large");
                 sub_chunk_len = 0;
@@ -491,7 +475,7 @@ public class QTMovie {
                 read_chunk_mvhd(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(116, 114, 97, 107))    // fourcc equals trak
             {
-                if (read_chunk_trak(sub_chunk_len) == 0) return 0;
+                readChunkTrak(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(117, 100, 116, 97))    // fourcc equals udta
             {
                 read_chunk_udta(sub_chunk_len);
