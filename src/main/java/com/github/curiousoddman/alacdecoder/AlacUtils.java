@@ -39,11 +39,7 @@ public class AlacUtils {
         int headerRead = headerQtMovie.read(demuxRes);
 
         if (headerRead == 0) {
-            if (demuxRes.getFormatRead() == 0) {
-                throw new IOException("Failed to load the QuickTime movie headers.");
-            } else {
-                throw new IOException("Error while loading the QuickTime movie headers.");
-            }
+            throw new IOException("Error while loading the QuickTime movie headers.");
         } else if (headerRead == 3) {
             /*
              ** This section is used when the stream system being used doesn't support seeking

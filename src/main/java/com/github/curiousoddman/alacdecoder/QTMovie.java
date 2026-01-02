@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import static com.github.curiousoddman.alacdecoder.DemuxUtils.makeFourCC;
 import static com.github.curiousoddman.alacdecoder.DemuxUtils.splitFourCC;
@@ -111,162 +112,110 @@ public class QTMovie {
     }
 
     void readChunkTkhd(int chunkLen) throws IOException {
-        skipChunk(chunkLen);
+        skipChunkMinus8(chunkLen);
     }
 
     void readChunkMdhd(int chunkLen) throws IOException {
-        skipChunk(chunkLen);
+        skipChunkMinus8(chunkLen);
     }
 
     void readChunkEdts(int chunkLen) throws IOException {
-        skipChunk(chunkLen);
-    }
-
-    private void skipChunk(int chunkLen) throws IOException {
-        /* don't need anything from here atm, skip */
-        qtstream.skip(chunkLen - 8);
+        skipChunkMinus8(chunkLen);
     }
 
     void readChunkElst(int chunkLen) throws IOException {
-        skipChunk(chunkLen);
+        skipChunkMinus8(chunkLen);
     }
 
     /* media handler inside mdia */
     void readChunkHandler(int chunkLen) throws IOException {
-        skipChunk(chunkLen);
+        skipChunkMinus8(chunkLen);
     }
 
-    int read_chunk_stsd() throws IOException {
-
-        /* version */
-        qtstream.readUint8();
-        /* flags */
-        qtstream.readUint8();
-        qtstream.readUint8();
-        qtstream.readUint8();
-
-        int numentries = 0;
-        try {
-            numentries = (qtstream.readUint32());
-        } catch (Exception e) {
-            System.err.println("(read_chunk_stsd) error reading numentries - possibly number too large");
+    void readChunkStsd() throws IOException {
+        /* version 1 byte*/
+        /* flags  3 bytes */
+        qtstream.skip(4);
+        if (qtstream.readUint32() != 1) {
+            throw new UnsupportedFormatException("only expecting one entry in sample description atom!");
         }
 
+        /* parse the alac atom contained within the stsd atom */
+        int entrySize = qtstream.readUint32();
+        res.setFormat(qtstream.readUint32());
+        int entryRemaining = entrySize;
+        entryRemaining -= 8;
 
-        if (numentries != 1) {
-            System.err.println("only expecting one entry in sample description atom!");
-            return 0;
+        if (res.getFormat() != makeFourCC(97, 108, 97, 99)) {    // "alac" ascii values
+            throw new UnsupportedFormatException("(read_chunk_stsd) error reading description atom - expecting alac, got " + splitFourCC(res.getFormat()));
         }
 
-        for (int i = 0; i < numentries; i++) {
-            /* parse the alac atom contained within the stsd atom */
+        /* sound info: */
+        qtstream.skip(6); // reserved
+        entryRemaining -= 6;
 
-            int entry_size = (qtstream.readUint32());
-            getRes().setFormat(qtstream.readUint32());
-            int entry_remaining = entry_size;
-            entry_remaining -= 8;
-
-            if (getRes().getFormat() != makeFourCC(97, 108, 97, 99))    // "alac" ascii values
-            {
-                System.err.println("(read_chunk_stsd) error reading description atom - expecting alac, got " + splitFourCC(getRes().getFormat()));
-                return 0;
-            }
-
-            /* sound info: */
-
-            qtstream.skip(6); // reserved
-            entry_remaining -= 6;
-
-            int version = qtstream.readUint16();
-
-            if (version != 1) System.err.println("unknown version??");
-            entry_remaining -= 2;
-
-            /* revision level */
-            qtstream.readUint16();
-            /* vendor */
-            qtstream.readUint32();
-            entry_remaining -= 6;
-
-            /* EH?? spec doesn't say theres an extra 16 bits here.. but there is! */
-            qtstream.readUint16();
-            entry_remaining -= 2;
-
-            /* skip 4 - this is the top level num of channels and bits per sample */
-            qtstream.skip(4);
-            entry_remaining -= 4;
-
-            /* compression id */
-            qtstream.readUint16();
-            /* packet size */
-            qtstream.readUint16();
-            entry_remaining -= 4;
-
-            /* skip 4 - this is the top level sample rate */
-            qtstream.skip(4);
-            entry_remaining -= 4;
-
-            /* remaining is codec data */
-
-            /* 12 = audio format atom, 8 = padding */
-            getRes().setCodecDataLen(entry_remaining + 12 + 8);
-
-            if (getRes().getCodecDataLen() > getRes().getCodecData().length) {
-                System.err.println("(read_chunk_stsd) unexpected codec data length read from atom " + getRes().getCodecDataLen());
-                return 0;
-            }
-
-            for (int count = 0; count < getRes().getCodecDataLen(); count++) {
-                getRes().getCodecData()[count] = 0;
-            }
-
-            /* audio format atom */
-            getRes().getCodecData()[0] = 0x0c000000;
-            getRes().getCodecData()[1] = makeFourCC(97, 109, 114, 102);        // "amrf" ascii values
-            getRes().getCodecData()[2] = makeFourCC(99, 97, 108, 97);        // "cala" ascii values
-
-            qtstream.read(entry_remaining, getRes().getCodecData(), 12);    // codecdata buffer should be +12
-            entry_remaining -= entry_remaining;
-
-            /* We need to read the bits per sample, number of channels and sample rate from the codec data i.e. the alac atom within
-             ** the stsd atom the 'alac' atom contains a number of pieces of information which we can skip just now, its processed later
-             ** in the alac_set_info() method. This atom contains the following information
-             **
-             ** samples_per_frame
-             ** compatible version
-             ** bits per sample
-             ** history multiplier
-             ** initial history
-             ** maximum K
-             ** channels
-             ** max run
-             ** max coded frame size
-             ** bitrate
-             ** sample rate
-             */
-            int ptrIndex = 29;    // position of bits per sample
-
-            getRes().setSampleSize((getRes().getCodecData()[ptrIndex] & 0xff));
-
-            ptrIndex = 33;    // position of num of channels
-
-            getRes().setNumChannels((getRes().getCodecData()[ptrIndex] & 0xff));
-
-            ptrIndex = 44;        // position of sample rate within codec data buffer
-
-            getRes().setSampleRate((((getRes().getCodecData()[ptrIndex] & 0xff) << 24) | ((getRes().getCodecData()[ptrIndex + 1] & 0xff) << 16) | ((getRes().getCodecData()[ptrIndex + 2] & 0xff) << 8) | (getRes().getCodecData()[ptrIndex + 3] & 0xff)));
-
-            if (entry_remaining != 0)    // was comparing to null
-                qtstream.skip(entry_remaining);
-
-            getRes().setFormatRead(1);
-            if (getRes().getFormat() != makeFourCC(97, 108, 97, 99))        // "alac" ascii values
-            {
-                return 0;
-            }
+        int version = qtstream.readUint16();
+        if (version != 1) {
+            throw new UnsupportedFormatException("unknown version: " + version);
         }
+        entryRemaining -= 2;
 
-        return 1;
+        /* revision level 2 bytes*/
+        /* vendor 4 bytes*/
+        /* EH?? spec doesn't say theres an extra 16 bits here.. but there is! 2 bytes */
+        /* skip 4 - this is the top level num of channels and bits per sample 4 bytes*/
+        /* compression id  2 bytes*/
+        /* packet size 2 bytes*/
+        /* skip 4 - this is the top level sample rate */
+        int toSkip = 20;
+        qtstream.skip(toSkip);
+        entryRemaining -= toSkip;
+
+        /* remaining is codec data */
+        /* 12 = audio format atom, 8 = padding */
+        res.setCodecDataLen(entryRemaining + 12 + 8);
+
+        int[] codecData = new int[res.getCodecDataLen()];
+        res.setCodecData(codecData);
+        Arrays.fill(codecData, 0);
+
+        /* audio format atom */
+        codecData[0] = 0x0c000000;
+        codecData[1] = makeFourCC(97, 109, 114, 102);        // "amrf" ascii values
+        codecData[2] = makeFourCC(99, 97, 108, 97);        // "cala" ascii values
+
+        qtstream.read(entryRemaining, codecData, 12);    // codecdata buffer should be +12
+        entryRemaining -= entryRemaining;
+
+        /* We need to read the bits per sample, number of channels and sample rate from the codec data i.e. the alac atom within
+         ** the stsd atom the 'alac' atom contains a number of pieces of information which we can skip just now, its processed later
+         ** in the alac_set_info() method. This atom contains the following information
+         **
+         ** samples_per_frame
+         ** compatible version
+         ** bits per sample
+         ** history multiplier
+         ** initial history
+         ** maximum K
+         ** channels
+         ** max run
+         ** max coded frame size
+         ** bitrate
+         ** sample rate
+         */
+        int ptrIndex = 29;    // position of bits per sample
+        res.setSampleSize((codecData[ptrIndex] & 0xff));
+
+        ptrIndex = 33;    // position of num of channels
+        res.setNumChannels((codecData[ptrIndex] & 0xff));
+
+        ptrIndex = 44;        // position of sample rate within codec data buffer
+        res.setSampleRate((((codecData[ptrIndex] & 0xff) << 24) | ((codecData[ptrIndex + 1] & 0xff) << 16) | ((codecData[ptrIndex + 2] & 0xff) << 8) | (codecData[ptrIndex + 3] & 0xff)));
+
+        qtstream.skip(entryRemaining);
+        if (res.getFormat() != makeFourCC(97, 108, 97, 99)) {        // "alac" ascii values
+            throw new UnsupportedFormatException("Expected alac, got something else...");
+        }
     }
 
     void read_chunk_stts(int chunk_len) throws IOException {
@@ -291,13 +240,13 @@ public class QTMovie {
 
         size_remaining -= 4;
 
-        getRes().setNumTimeToSamples(numentries);
+        res.setNumTimeToSamples(numentries);
 
         for (int i = 0; i < numentries; i++) {
             SampleInfo sampleInfo = new SampleInfo();
             sampleInfo.setSampleCount(qtstream.readUint32());
             sampleInfo.setSampleDuration(qtstream.readUint32());
-            getRes().getTimeToSample().add(sampleInfo);
+            res.getTimeToSample().add(sampleInfo);
             size_remaining -= 8;
         }
 
@@ -331,10 +280,10 @@ public class QTMovie {
 
             int uniform_num = (qtstream.readUint32());
 
-            getRes().setSampleByteSize(new int[uniform_num]);
+            res.setSampleByteSize(new int[uniform_num]);
 
             for (i = 0; i < uniform_num; i++) {
-                getRes().getSampleByteSize()[i] = uniform_size;
+                res.getSampleByteSize()[i] = uniform_size;
             }
             return;
         }
@@ -349,10 +298,10 @@ public class QTMovie {
 
         size_remaining -= 4;
 
-        getRes().setSampleByteSize(new int[numentries]);
+        res.setSampleByteSize(new int[numentries]);
 
         for (i = 0; i < numentries; i++) {
-            getRes().getSampleByteSize()[i] = (qtstream.readUint32());
+            res.getSampleByteSize()[i] = (qtstream.readUint32());
 
             size_remaining -= 4;
         }
@@ -383,20 +332,15 @@ public class QTMovie {
 
             int sub_chunk_id = qtstream.readUint32();
 
-            if (sub_chunk_id == makeFourCC(115, 116, 115, 100))    // fourcc equals stsd
-            {
-                if (read_chunk_stsd() == 0) return 0;
-            } else if (sub_chunk_id == makeFourCC(115, 116, 116, 115))    // fourcc equals stts
-            {
+            if (sub_chunk_id == makeFourCC(115, 116, 115, 100)) {   // fourcc equals stsd
+                readChunkStsd();
+            } else if (sub_chunk_id == makeFourCC(115, 116, 116, 115)) {  // fourcc equals stts
                 read_chunk_stts(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(115, 116, 115, 122))    // fourcc equals stsz
-            {
+            } else if (sub_chunk_id == makeFourCC(115, 116, 115, 122)) { // fourcc equals stsz
                 read_chunk_stsz(sub_chunk_len);
-            } else if (sub_chunk_id == makeFourCC(115, 116, 115, 99))    // fourcc equals stsc
-            {
+            } else if (sub_chunk_id == makeFourCC(115, 116, 115, 99)) {  // fourcc equals stsc
                 read_chunk_stsc();
-            } else if (sub_chunk_id == makeFourCC(115, 116, 99, 111))    // fourcc equals stco
-            {
+            } else if (sub_chunk_id == makeFourCC(115, 116, 99, 111)) {  // fourcc equals stco
                 read_chunk_stco();
             } else {
                 System.err.println("(stbl) unknown chunk id: " + splitFourCC(sub_chunk_id));
@@ -419,9 +363,9 @@ public class QTMovie {
 
         int num_entries = stream.readUint32();
 
-        getRes().setStco(new int[num_entries]);
+        res.setStco(new int[num_entries]);
         for (int i = 0; i < num_entries; i++) {
-            getRes().getStco()[i] = stream.readUint32();
+            res.getStco()[i] = stream.readUint32();
         }
     }
 
@@ -434,13 +378,13 @@ public class QTMovie {
         //skip version and other junk
         stream.skip(4);
         int num_entries = stream.readUint32();
-        getRes().setStsc(new ChunkInfo[num_entries]);
+        res.setStsc(new ChunkInfo[num_entries]);
         for (int i = 0; i < num_entries; i++) {
             ChunkInfo entry = new ChunkInfo();
             entry.setFirstChunk(stream.readUint32());
             entry.setSamplesPerChunk(stream.readUint32());
             entry.setSampleDescIndex(stream.readUint32());
-            getRes().getStsc()[i] = entry;
+            res.getStsc()[i] = entry;
         }
     }
 
@@ -674,7 +618,7 @@ public class QTMovie {
             return;
         }
 
-        getRes().setMdatLen(size_remaining);
+        res.setMdatLen(size_remaining);
         if (skipMdat) {
             setSavedMdatPos(qtstream.getCurrentPos());
             qtstream.skip(size_remaining);
@@ -693,5 +637,10 @@ public class QTMovie {
         }
 
         return 3;
+    }
+
+    private void skipChunkMinus8(int chunkLen) throws IOException {
+        /* don't need anything from here atm, skip */
+        qtstream.skip(chunkLen - 8);
     }
 }

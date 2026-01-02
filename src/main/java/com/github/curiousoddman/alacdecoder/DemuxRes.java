@@ -22,8 +22,6 @@ import java.util.List;
 public class DemuxRes {
     private final List<SampleInfo> timeToSample = new ArrayList<>();
 
-    private int formatRead;
-
     private int numChannels;
     private int sampleSize;
     private int sampleRate;
@@ -35,7 +33,7 @@ public class DemuxRes {
 
     private int codecDataLen;
 
-    private int[] codecData = new int[1024];
+    private int[] codecData;
 
     private int[] stco;
     private ChunkInfo[] stsc;
