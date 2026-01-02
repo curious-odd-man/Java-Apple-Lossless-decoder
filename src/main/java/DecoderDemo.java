@@ -40,7 +40,7 @@ public class DecoderDemo {
 
             /* write wav output headers */
             if (config.wavFormat() == WavFormat.RAW_PCM) {
-                WavWriter.writeHeaders(fileOutputStream, (totalSamples * bytesPerSample * numChannels), numChannels, sampleRate, bytesPerSample, bitsPerSample);
+                WavWriter.writeHeaders(fileOutputStream, totalSamples * bytesPerSample * numChannels, numChannels, sampleRate, bytesPerSample, bitsPerSample);
             }
 
             /* will convert the entire buffer */
@@ -61,7 +61,7 @@ public class DecoderDemo {
         switch (bps) {
             case 1:
                 while (samcnt > 0) {
-                    dst[counter] = (byte) (0x00FF & (src[counter] + 128));
+                    dst[counter] = (byte) (0x00FF & src[counter] + 128);
                     counter++;
                     samcnt--;
                 }

@@ -26,7 +26,7 @@ public class WavWriter {
         os.write(70);
         os.write(70);    // "RIFF" ascii values
 
-        writeUint32(os, (36 + dataSize));
+        writeUint32(os, 36 + dataSize);
         os.write(87);
         os.write(65);
         os.write(86);
@@ -42,8 +42,8 @@ public class WavWriter {
         writeUint16(os, 1); // PCM data
         writeUint16(os, numChannels);
         writeUint32(os, sampleRate);
-        writeUint32(os, (sampleRate * numChannels * bytesPerSample)); // byterate
-        writeUint16(os, (numChannels * bytesPerSample));
+        writeUint32(os, sampleRate * numChannels * bytesPerSample); // byterate
+        writeUint16(os, numChannels * bytesPerSample);
         writeUint16(os, bitsPerSample);
 
         /* write data header */
@@ -56,14 +56,13 @@ public class WavWriter {
     }
 
     static void writeUint32(OutputStream f, int v) throws IOException {
-        f.write((byte) (v));
-        f.write((byte) (v >>> 8));
+        writeUint16(f, v);
         f.write((byte) (v >>> 16));
         f.write((byte) (v >>> 24));
     }
 
     static void writeUint16(OutputStream f, int v) throws IOException {
-        f.write((byte) (v));
+        f.write((byte) v);
         f.write((byte) (v >>> 8));
     }
 }

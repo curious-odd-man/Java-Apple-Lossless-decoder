@@ -44,17 +44,17 @@ public class DataInputStreamWrapper {
     public int readUint32() throws IOException {
         int bytesRead = stream.read(readBuf, 0, 4);
         currentPos += bytesRead;
-        int tmp = (readBuf[0] & 0xff);
+        int tmp = readBuf[0] & 0xff;
 
         int v = tmp << 24;
-        tmp = (readBuf[1] & 0xff);
+        tmp = readBuf[1] & 0xff;
 
-        v = v | (tmp << 16);
-        tmp = (readBuf[2] & 0xff);
+        v = v | tmp << 16;
+        tmp = readBuf[2] & 0xff;
 
-        v = v | (tmp << 8);
+        v = v | tmp << 8;
 
-        tmp = (readBuf[3] & 0xff);
+        tmp = readBuf[3] & 0xff;
         v = v | tmp;
 
         return v;
@@ -63,9 +63,9 @@ public class DataInputStreamWrapper {
     public int readUint16() throws IOException {
         int bytesRead = stream.read(readBuf, 0, 2);
         currentPos += bytesRead;
-        int tmp = (readBuf[0] & 0xff);
+        int tmp = readBuf[0] & 0xff;
         int v = tmp << 8;
-        tmp = (readBuf[1] & 0xff);
+        tmp = readBuf[1] & 0xff;
         v = v | tmp;
         return v;
     }

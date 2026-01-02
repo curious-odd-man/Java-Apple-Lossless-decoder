@@ -17,6 +17,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class SampleDuration {
-    private int sampleDuration = 0;
-    private int sampleByteSize = 0;
+    private int sampleDuration;
+    private int sampleByteSize;
 }

@@ -49,7 +49,7 @@ public class DemuxRes {
 
         int durationCurIndex = 0;
         int durationIndexAccum = 0;
-        while ((getTimeToSample().get(durationCurIndex).getSampleCount() + durationIndexAccum) <= sampleIndex) {
+        while (getTimeToSample().get(durationCurIndex).getSampleCount() + durationIndexAccum <= sampleIndex) {
             durationIndexAccum += getTimeToSample().get(durationCurIndex).getSampleCount();
             durationCurIndex++;
             if (durationCurIndex >= getTimeToSample().size()) {

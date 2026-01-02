@@ -134,7 +134,7 @@ public class AlacContext implements AutoCloseable {
 
     public int getBytesPerSample() {
         if (this.demuxRes.getSampleSize() != 0) {
-            return (int) Math.ceil(demuxRes.getSampleSize() / 8);
+            return (int) Math.ceil((double) demuxRes.getSampleSize() / 8);
         } else {
             return 2;
         }
