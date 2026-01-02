@@ -343,78 +343,43 @@ public class QTMovie {
         }
     }
 
-    int read_chunk_minf(int chunk_len) throws IOException {
-        int media_info_size;
+    void readChunkMinf(int chunkLen) throws IOException {
+        /* *** SOUND HEADER CHUNK ****/
 
-        /**** SOUND HEADER CHUNK ****/
-
-        try {
-            media_info_size = (qtstream.readUint32());
-        } catch (Exception e) {
-            System.err.println("(read_chunk_minf) error reading media_info_size - possibly number too large");
-            media_info_size = 0;
+        int mediaInfoSize = qtstream.readUint32();
+        if (mediaInfoSize != 16) {
+            throw new UnsupportedFormatException("unexpected size in media info");
         }
-
-        if (media_info_size != 16) {
-            System.err.println("unexpected size in media info\n");
-            return 0;
-        }
-        if (qtstream.readUint32() != makeFourCC(115, 109, 104, 100))    // "smhd" ascii values
-        {
-            System.err.println("not a sound header! can't handle this.");
-            return 0;
+        if (qtstream.readUint32() != makeFourCC(115, 109, 104, 100)) {   // "smhd" ascii values
+            throw new UnsupportedFormatException("not a sound header! can't handle this.");
         }
         /* now skip the rest */
         qtstream.skip(16 - 8);
         // FIXME WRONG
-        int size_remaining = chunk_len - 8;
-        size_remaining -= 16;
-        /****/
+        int sizeRemaining = chunkLen - 8 - 16;
+        /* *** DINF CHUNK ****/
 
-        /**** DINF CHUNK ****/
-
-        int dinf_size;
-        try {
-            dinf_size = (qtstream.readUint32());
-        } catch (Exception e) {
-            System.err.println("(read_chunk_minf) error reading dinf_size - possibly number too large");
-            dinf_size = 0;
-        }
-
-        if (qtstream.readUint32() != makeFourCC(100, 105, 110, 102))    // "dinf" ascii values
-        {
-            System.err.println("expected dinf, didn't get it.");
-            return 0;
+        int dinfSize = qtstream.readUint32();
+        if (qtstream.readUint32() != makeFourCC(100, 105, 110, 102)) {    // "dinf" ascii values
+            throw new UnsupportedFormatException("expected dinf, didn't get it.");
         }
         /* skip it */
-        qtstream.skip(dinf_size - 8);
-        size_remaining -= dinf_size;
-        /****/
+        qtstream.skip(dinfSize - 8);
+        sizeRemaining -= dinfSize;
+        /* ***/
 
-
-        /**** SAMPLE TABLE ****/
-        int stbl_size;
-        try {
-            stbl_size = (qtstream.readUint32());
-        } catch (Exception e) {
-            System.err.println("(read_chunk_minf) error reading stbl_size - possibly number too large");
-            stbl_size = 0;
+        /* *** SAMPLE TABLE ****/
+        int stblSize = qtstream.readUint32();
+        if (qtstream.readUint32() != makeFourCC(115, 116, 98, 108)) { // "stbl" ascii values
+            throw new UnsupportedFormatException("expected stbl, didn't get it.");
         }
+        readChunkStbl(stblSize);
+        sizeRemaining -= stblSize;
 
-        if (qtstream.readUint32() != makeFourCC(115, 116, 98, 108))    // "stbl" ascii values
-        {
-            System.err.println("expected stbl, didn't get it.");
-            return 0;
+        if (sizeRemaining != 0) {
+            log.error("(read_chunk_minf) - size remaining?");
+            qtstream.skip(sizeRemaining);
         }
-        readChunkStbl(stbl_size);
-        size_remaining -= stbl_size;
-
-        if (size_remaining != 0) {
-            System.err.println("(read_chunk_minf) - size remaining?");
-            qtstream.skip(size_remaining);
-        }
-
-        return 1;
     }
 
     int read_chunk_mdia(int chunk_len) throws IOException {
@@ -445,7 +410,7 @@ public class QTMovie {
                 readChunkHandler(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(109, 105, 110, 102))    // fourcc equals minf
             {
-                if (read_chunk_minf(sub_chunk_len) == 0) return 0;
+                readChunkMinf(sub_chunk_len);
             } else {
                 System.err.println("(mdia) unknown chunk id: " + splitFourCC(sub_chunk_id));
                 return 0;
