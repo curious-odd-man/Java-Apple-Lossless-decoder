@@ -543,7 +543,7 @@ class AlacDecodeUtils {
             int readsamplesize = alac.setinfo_sample_size - uncompressed_bytes * 8;
 
             if (isnotcompressed == 0) { // so it is compressed
-                int[] predictor_coef_table = alac.predictor_coef_table;
+                int[] predictor_coef_table = alac.getPredictor_coef_table();
                 int i;
 
                 /* skip 16 bits, not sure what they are. seem to be used in
@@ -571,15 +571,15 @@ class AlacDecodeUtils {
 
                 if (uncompressed_bytes != 0) {
                     for (i = 0; i < outputsamples; i++) {
-                        alac.uncompressed_bytes_buffer_a[i] = readbits(alac, uncompressed_bytes * 8);
+                        alac.getUncompressed_bytes_buffer_a()[i] = readbits(alac, uncompressed_bytes * 8);
                     }
                 }
 
 
-                entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
+                entropy_rice_decode(alac, alac.getPredicterror_buffer_a(), outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
 
                 if (prediction_type == 0) { // adaptive fir
-                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
+                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.getPredicterror_buffer_a(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization);
                 } else {
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type);
 
@@ -646,7 +646,7 @@ class AlacDecodeUtils {
                         if (uncompressed_bytes != 0) {
                             sample = sample << uncompressed_bytes * 8;
                             int mask = ~(0xFFFFFFFF << uncompressed_bytes * 8);
-                            sample = sample | alac.uncompressed_bytes_buffer_a[i] & mask;
+                            sample = sample | alac.getUncompressed_bytes_buffer_a()[i] & mask;
                         }
 
                         outbuffer[i * alac.getNumChannels() * 3] = sample & 0xFF;
@@ -701,9 +701,9 @@ class AlacDecodeUtils {
             int readsamplesize = alac.setinfo_sample_size - uncompressed_bytes * 8 + 1;
 
             if (isnotcompressed == 0) { // compressed
-                int[] predictor_coef_table_a = alac.predictor_coef_table_a;
+                int[] predictor_coef_table_a = alac.getPredictor_coef_table_a();
 
-                int[] predictor_coef_table_b = alac.predictor_coef_table_b;
+                int[] predictor_coef_table_b = alac.getPredictor_coef_table_b();
 
                 int tempPred;
 
@@ -749,28 +749,28 @@ class AlacDecodeUtils {
                 /* ********************/
                 if (uncompressed_bytes != 0) { // see mono case
                     for (int i = 0; i < outputsamples; i++) {
-                        alac.uncompressed_bytes_buffer_a[i] = readbits(alac, uncompressed_bytes * 8);
-                        alac.uncompressed_bytes_buffer_b[i] = readbits(alac, uncompressed_bytes * 8);
+                        alac.getUncompressed_bytes_buffer_a()[i] = readbits(alac, uncompressed_bytes * 8);
+                        alac.getUncompressed_bytes_buffer_b()[i] = readbits(alac, uncompressed_bytes * 8);
                     }
                 }
 
                 /* channel 1 */
 
-                entropy_rice_decode(alac, alac.predicterror_buffer_a, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_a * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
+                entropy_rice_decode(alac, alac.getPredicterror_buffer_a(), outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_a * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
 
                 if (prediction_type_a == 0) { // adaptive fir
 
-                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.predicterror_buffer_a, outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a);
+                    alac.outputsamples_buffer_a = predictor_decompress_fir_adapt(alac.getPredicterror_buffer_a(), outputsamples, readsamplesize, predictor_coef_table_a, predictor_coef_num_a, prediction_quantitization_a);
 
                 } else { // see mono case
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_a);
                 }
 
                 /* channel 2 */
-                entropy_rice_decode(alac, alac.predicterror_buffer_b, outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_b * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
+                entropy_rice_decode(alac, alac.getPredicterror_buffer_b(), outputsamples, readsamplesize, alac.setinfo_rice_initialhistory, alac.setinfo_rice_kmodifier, ricemodifier_b * (alac.setinfo_rice_historymult / 4), (1 << alac.setinfo_rice_kmodifier) - 1);
 
                 if (prediction_type_b == 0) { // adaptive fir
-                    alac.outputsamples_buffer_b = predictor_decompress_fir_adapt(alac.predicterror_buffer_b, outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b);
+                    alac.outputsamples_buffer_b = predictor_decompress_fir_adapt(alac.getPredicterror_buffer_b(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b);
                 } else {
                     System.err.println("FIXME: unhandled predicition type: " + prediction_type_b);
                 }
@@ -826,7 +826,7 @@ class AlacDecodeUtils {
                     break;
                 }
                 case 24: {
-                    deinterlace_24(alac.outputsamples_buffer_a, alac.outputsamples_buffer_b, uncompressed_bytes, alac.uncompressed_bytes_buffer_a, alac.uncompressed_bytes_buffer_b, outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace_24(alac.outputsamples_buffer_a, alac.outputsamples_buffer_b, uncompressed_bytes, alac.getUncompressed_bytes_buffer_a(), alac.getUncompressed_bytes_buffer_b(), outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 20:

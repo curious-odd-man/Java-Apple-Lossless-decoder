@@ -14,13 +14,21 @@ import lombok.Data;
 
 @Data
 public class AlacFileData {
+    private static final int BUFFER_SIZE = 16384;
+
     private final int sampleSize;
     private final int numChannels;
     private final int bytesPerSample;
 
-    public final int[] predictor_coef_table = new int[1024];
-    public final int[] predictor_coef_table_a = new int[1024];
-    public final int[] predictor_coef_table_b = new int[1024];
+    private final int[] predictor_coef_table = new int[1024];
+    private final int[] predictor_coef_table_a = new int[1024];
+    private final int[] predictor_coef_table_b = new int[1024];
+
+    private final int[] predicterror_buffer_a = new int[BUFFER_SIZE];
+    private final int[] predicterror_buffer_b = new int[BUFFER_SIZE];
+    private final int[] uncompressed_bytes_buffer_a = new int[BUFFER_SIZE];
+    private final int[] uncompressed_bytes_buffer_b = new int[BUFFER_SIZE];
+
     public byte[] input_buffer;
     public int ibIdx = 0;
     public int input_buffer_bitaccumulator = 0; /* used so we can do arbitary
@@ -41,15 +49,11 @@ public class AlacFileData {
     public int setinfo_86 = 0; // 0x00069fe4
     /* bit rate (avarge)?? */
     public int setinfo_8a_rate = 0; // 0x0000ac44
-    private final int buffer_size = 16384;
-    /* buffers */
-    public final int[] predicterror_buffer_a = new int[buffer_size];
-    public final int[] predicterror_buffer_b = new int[buffer_size];
-    public int[] outputsamples_buffer_a = new int[buffer_size];
+
+    public int[] outputsamples_buffer_a = new int[BUFFER_SIZE];
     /* end setinfo stuff */
-    public int[] outputsamples_buffer_b = new int[buffer_size];
-    public final int[] uncompressed_bytes_buffer_a = new int[buffer_size];
-    public final int[] uncompressed_bytes_buffer_b = new int[buffer_size];
+    public int[] outputsamples_buffer_b = new int[BUFFER_SIZE];
+
 
     public AlacFileData(int sampleSize, int numChannels) {
         this.sampleSize = sampleSize;
