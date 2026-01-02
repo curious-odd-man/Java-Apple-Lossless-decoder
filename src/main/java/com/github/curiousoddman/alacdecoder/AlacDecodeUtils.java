@@ -11,11 +11,10 @@
 package com.github.curiousoddman.alacdecoder;
 
 import com.github.curiousoddman.alacdecoder.data.AlacFileData;
-import com.github.curiousoddman.alacdecoder.data.Defines;
 import com.github.curiousoddman.alacdecoder.data.LeadingZeros;
 
-class AlacDecodeUtils {
-    static void count_leading_zeros_extra(int curbyte, int output, LeadingZeros lz) {
+public class AlacDecodeUtils {
+    public static void count_leading_zeros_extra(int curbyte, int output, LeadingZeros lz) {
 
         if ((curbyte & 0xf0) == 0) {
             output += 4;
@@ -51,7 +50,7 @@ class AlacDecodeUtils {
 
     }
 
-    static int count_leading_zeros(int input, LeadingZeros lz) {
+    public static int count_leading_zeros(int input, LeadingZeros lz) {
         int output = 0;
 
         int curbyte = input >> 24;
@@ -90,105 +89,6 @@ class AlacDecodeUtils {
         output += 8;
 
         return output;
-    }
-
-    public static int entropy_decode_value(AlacFileData alac, int readSampleSize, int k, int rice_kmodifier_mask) {
-        int x = 0; // decoded value
-
-        // read x, number of 1s before 0 represent the rice value.
-        while (x <= Defines.RICE_THRESHOLD && alac.readbit() != 0) {
-            x++;
-        }
-
-        if (x > Defines.RICE_THRESHOLD) {
-            // read the number from the bit stream (raw value)
-
-            int value = alac.readbits(readSampleSize);
-
-            // mask value
-            value &= 0xffffffff >> 32 - readSampleSize;
-
-            x = value;
-        } else {
-            if (k != 1) {
-                int extraBits = alac.readbits(k);
-
-                x *= (1 << k) - 1 & rice_kmodifier_mask;
-
-                if (extraBits > 1) {
-                    x += extraBits - 1;
-                } else {
-                    alac.unreadbits();
-                }
-            }
-        }
-
-        return x;
-    }
-
-    public static void entropy_rice_decode(AlacFileData alac, int[] outputBuffer, int outputSize, int readSampleSize, int rice_initialhistory, int rice_kmodifier, int rice_historymult, int rice_kmodifier_mask) {
-        int history = rice_initialhistory;
-        int outputCount = 0;
-        int signModifier = 0;
-
-        while (outputCount < outputSize) {
-
-            int k = 31 - rice_kmodifier - count_leading_zeros((history >> 9) + 3, alac.getLz());
-
-            if (k < 0) {
-                k += rice_kmodifier;
-            } else {
-                k = rice_kmodifier;
-            }
-
-            // note: don't use rice_kmodifier_mask here (set mask to 0xFFFFFFFF)
-            int decodedValue = entropy_decode_value(alac, readSampleSize, k, 0xFFFFFFFF);
-
-            decodedValue += signModifier;
-            int finalValue = (decodedValue + 1) / 2; // inc by 1 and shift out sign bit
-            if ((decodedValue & 1) != 0) // the sign is stored in the low bit
-            {
-                finalValue *= -1;
-            }
-
-            outputBuffer[outputCount] = finalValue;
-
-            signModifier = 0;
-
-            // update history
-            history += decodedValue * rice_historymult - (history * rice_historymult >> 9);
-
-            if (decodedValue > 0xFFFF) {
-                history = 0xFFFF;
-            }
-
-            // special case, for compressed blocks of 0
-            if (history < 128 && outputCount + 1 < outputSize) {
-
-                signModifier = 1;
-
-                k = count_leading_zeros(history, alac.getLz()) + (history + 16) / 64 - 24;
-
-                // note: blockSize is always 16bit
-                int blockSize = entropy_decode_value(alac, 16, k, rice_kmodifier_mask);
-
-                // got blockSize 0s
-                if (blockSize > 0) {
-                    for (int j = 0; j < blockSize; j++) {
-                        outputBuffer[outputCount + 1 + j] = 0;
-                    }
-                    outputCount += blockSize;
-                }
-
-                if (blockSize > 0xFFFF) {
-                    signModifier = 0;
-                }
-
-                history = 0;
-            }
-
-            outputCount++;
-        }
     }
 
     static int[] predictor_decompress_fir_adapt(int[] buffer_out, int output_size, int readsamplesize, int[] predictor_coef_table, int predictor_coef_num, int predictor_quantitization) {
@@ -457,7 +357,7 @@ class AlacDecodeUtils {
                 }
 
 
-                entropy_rice_decode(alac, alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
+                alac.entropy_rice_decode(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
 
                 if (prediction_type == 0) { // adaptive fir
                     alac.setOutputSamplesBufferA(predictor_decompress_fir_adapt(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, predictor_coef_table, predictor_coef_num, prediction_quantitization));
@@ -628,7 +528,7 @@ class AlacDecodeUtils {
 
                 /* channel 1 */
 
-                entropy_rice_decode(alac, alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_a * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
+                alac.entropy_rice_decode(alac.getPredictErrorBufferA(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_a * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
 
                 if (prediction_type_a == 0) { // adaptive fir
 
@@ -639,7 +539,7 @@ class AlacDecodeUtils {
                 }
 
                 /* channel 2 */
-                entropy_rice_decode(alac, alac.getPredictErrorBufferB(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_b * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
+                alac.entropy_rice_decode(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, alac.getRiceInitialhistory(), alac.getRiceKmodifier(), ricemodifier_b * (alac.getRiceHistorymult() / 4), (1 << alac.getRiceKmodifier()) - 1);
 
                 if (prediction_type_b == 0) { // adaptive fir
                     alac.setOutputSamplesBufferB(predictor_decompress_fir_adapt(alac.getPredictErrorBufferB(), outputsamples, readsamplesize, predictor_coef_table_b, predictor_coef_num_b, prediction_quantitization_b));

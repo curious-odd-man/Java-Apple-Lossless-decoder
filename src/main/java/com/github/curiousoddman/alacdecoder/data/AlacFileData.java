@@ -12,6 +12,8 @@ package com.github.curiousoddman.alacdecoder.data;
 
 import lombok.Data;
 
+import static com.github.curiousoddman.alacdecoder.AlacDecodeUtils.count_leading_zeros;
+
 @Data
 public class AlacFileData {
     private static final int BUFFER_SIZE = 16384;
@@ -146,10 +148,107 @@ public class AlacFileData {
     }
 
     public void unreadbits() {
-        int new_accumulator = inputBufferBitAccumulator - 1;
+        int newAccumulator = inputBufferBitAccumulator - 1;
+        ibIdx += newAccumulator >> 3;
+        inputBufferBitAccumulator = newAccumulator & 7;
+    }
 
-        setIbIdx(getIbIdx() + (new_accumulator >> 3));
+    public int entropy_decode_value(int readSampleSize, int k, int rice_kmodifier_mask) {
+        int x = 0; // decoded value
 
-        inputBufferBitAccumulator = new_accumulator & 7;
+        // read x, number of 1s before 0 represent the rice value.
+        while (x <= Defines.RICE_THRESHOLD && readbit() != 0) {
+            x++;
+        }
+
+        if (x > Defines.RICE_THRESHOLD) {
+            // read the number from the bit stream (raw value)
+
+            int value = readbits(readSampleSize);
+
+            // mask value
+            value &= 0xffffffff >> 32 - readSampleSize;
+
+            x = value;
+        } else {
+            if (k != 1) {
+                int extraBits = readbits(k);
+
+                x *= (1 << k) - 1 & rice_kmodifier_mask;
+
+                if (extraBits > 1) {
+                    x += extraBits - 1;
+                } else {
+                    unreadbits();
+                }
+            }
+        }
+
+        return x;
+    }
+
+    public void entropy_rice_decode(int[] outputBuffer, int outputSize, int readSampleSize, int rice_initialhistory, int rice_kmodifier, int rice_historymult, int rice_kmodifier_mask) {
+        int history = rice_initialhistory;
+        int outputCount = 0;
+        int signModifier = 0;
+
+        while (outputCount < outputSize) {
+
+            int k = 31 - rice_kmodifier - count_leading_zeros((history >> 9) + 3, getLz());
+
+            if (k < 0) {
+                k += rice_kmodifier;
+            } else {
+                k = rice_kmodifier;
+            }
+
+            // note: don't use rice_kmodifier_mask here (set mask to 0xFFFFFFFF)
+            int decodedValue = entropy_decode_value(readSampleSize, k, 0xFFFFFFFF);
+
+            decodedValue += signModifier;
+            int finalValue = (decodedValue + 1) / 2; // inc by 1 and shift out sign bit
+            if ((decodedValue & 1) != 0) // the sign is stored in the low bit
+            {
+                finalValue *= -1;
+            }
+
+            outputBuffer[outputCount] = finalValue;
+
+            signModifier = 0;
+
+            // update history
+            history += decodedValue * rice_historymult - (history * rice_historymult >> 9);
+
+            if (decodedValue > 0xFFFF) {
+                history = 0xFFFF;
+            }
+
+            // special case, for compressed blocks of 0
+            if (history < 128 && outputCount + 1 < outputSize) {
+
+                signModifier = 1;
+
+                k = count_leading_zeros(history, getLz()) + (history + 16) / 64 - 24;
+
+                // note: blockSize is always 16bit
+                int blockSize = entropy_decode_value(16, k, rice_kmodifier_mask);
+
+                // got blockSize 0s
+                if (blockSize > 0) {
+                    for (int j = 0; j < blockSize; j++) {
+                        outputBuffer[outputCount + 1 + j] = 0;
+                    }
+                    outputCount += blockSize;
+                }
+
+                if (blockSize > 0xFFFF) {
+                    signModifier = 0;
+                }
+
+                history = 0;
+            }
+
+            outputCount++;
+        }
     }
 }
