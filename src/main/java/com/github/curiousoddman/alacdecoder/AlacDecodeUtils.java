@@ -17,9 +17,11 @@ import com.github.curiousoddman.alacdecoder.data.LeadingZeros;
 class AlacDecodeUtils {
     /* supports reading 1 to 16 bits, in big endian format */
     static int readbits_16(AlacFileData alac, int bits) {
-        int part1 = alac.getInputBuffer()[alac.ibIdx] & 0xff;
-        int part2 = alac.getInputBuffer()[alac.ibIdx + 1] & 0xff;
-        int part3 = alac.getInputBuffer()[alac.ibIdx + 2] & 0xff;
+        byte[] inputBuffer = alac.getInputBuffer();
+        int ibIdx = alac.getIbIdx();
+        int part1 = inputBuffer[ibIdx] & 0xff;
+        int part2 = inputBuffer[ibIdx + 1] & 0xff;
+        int part3 = inputBuffer[ibIdx + 2] & 0xff;
 
         int result = part1 << 16 | part2 << 8 | part3;
 
@@ -464,7 +466,7 @@ class AlacDecodeUtils {
         /* setup the stream */
         alac.setInputBuffer(inbuffer);
         alac.setInputBufferBitaccumulator(0);
-        alac.ibIdx = 0;
+        alac.setIbIdx(0);
 
         int channels = readbits(alac, 3);
 
