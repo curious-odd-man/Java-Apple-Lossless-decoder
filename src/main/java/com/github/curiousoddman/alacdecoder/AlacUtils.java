@@ -58,7 +58,7 @@ public class AlacUtils {
 
         /* initialise the sound converter */
 
-        AlacFileData alac = AlacDecodeUtils.create_alac(demuxRes.getSampleSize(), demuxRes.getNumChannels());
+        AlacFileData alac = new AlacFileData(demuxRes.getSampleSize(), demuxRes.getNumChannels());
 
         AlacDecodeUtils.alac_set_info(alac, demuxRes.getCodecData());
 

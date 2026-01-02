@@ -10,7 +10,13 @@
  */
 package com.github.curiousoddman.alacdecoder.data;
 
+import lombok.Data;
+
+@Data
 public class AlacFileData {
+    private final int sampleSize;
+    private final int numChannels;
+    private final int bytesPerSample;
 
     public final int[] predictor_coef_table = new int[1024];
     public final int[] predictor_coef_table_a = new int[1024];
@@ -19,9 +25,6 @@ public class AlacFileData {
     public int ibIdx = 0;
     public int input_buffer_bitaccumulator = 0; /* used so we can do arbitary
 						bit reads */
-    public int samplesize = 0;
-    public int numchannels = 0;
-    public int bytespersample = 0;
     public final LeadingZeros lz = new LeadingZeros();
     /* stuff from setinfo */
     public int setinfo_max_samples_per_frame = 0; // 0x1000 = 4096
@@ -47,4 +50,10 @@ public class AlacFileData {
     public int[] outputsamples_buffer_b = new int[buffer_size];
     public final int[] uncompressed_bytes_buffer_a = new int[buffer_size];
     public final int[] uncompressed_bytes_buffer_b = new int[buffer_size];
+
+    public AlacFileData(int sampleSize, int numChannels) {
+        this.sampleSize = sampleSize;
+        this.numChannels = numChannels;
+        this.bytesPerSample = sampleSize / 8 * numChannels;
+    }
 }

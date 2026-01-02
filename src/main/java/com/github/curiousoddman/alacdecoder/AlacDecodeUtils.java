@@ -511,7 +511,7 @@ class AlacDecodeUtils {
 
         int channels = readbits(alac, 3);
 
-        int outputsize = outputsamples * alac.bytespersample;
+        int outputsize = outputsamples * alac.getBytesPerSample();
 
         if (channels == 0) // 1 channel
         {
@@ -537,7 +537,7 @@ class AlacDecodeUtils {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputsamples = readbits(alac, 32);
-                outputsize = outputsamples * alac.bytespersample;
+                outputsize = outputsamples * alac.getBytesPerSample();
             }
 
             int readsamplesize = alac.setinfo_sample_size - uncompressed_bytes * 8;
@@ -627,7 +627,7 @@ class AlacDecodeUtils {
 
                     for (int i = 0; i < outputsamples; i++) {
                         int sample = alac.outputsamples_buffer_a[i];
-                        outbuffer[i * alac.numchannels] = sample;
+                        outbuffer[i * alac.getNumChannels()] = sample;
 
                         /*
                          ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
@@ -635,7 +635,7 @@ class AlacDecodeUtils {
                          ** will be overwritten in the next iteration
                          */
 
-                        outbuffer[i * alac.numchannels + 1] = 0;
+                        outbuffer[i * alac.getNumChannels() + 1] = 0;
                     }
                     break;
                 }
@@ -649,9 +649,9 @@ class AlacDecodeUtils {
                             sample = sample | alac.uncompressed_bytes_buffer_a[i] & mask;
                         }
 
-                        outbuffer[i * alac.numchannels * 3] = sample & 0xFF;
-                        outbuffer[i * alac.numchannels * 3 + 1] = sample >> 8 & 0xFF;
-                        outbuffer[i * alac.numchannels * 3 + 2] = sample >> 16 & 0xFF;
+                        outbuffer[i * alac.getNumChannels() * 3] = sample & 0xFF;
+                        outbuffer[i * alac.getNumChannels() * 3 + 1] = sample >> 8 & 0xFF;
+                        outbuffer[i * alac.getNumChannels() * 3 + 2] = sample >> 16 & 0xFF;
 
                         /*
                          ** We have to handle the case where the data is actually mono, but the stsd atom says it has 2 channels
@@ -659,9 +659,9 @@ class AlacDecodeUtils {
                          ** will be overwritten in the next iteration
                          */
 
-                        outbuffer[i * alac.numchannels * 3 + 3] = 0;
-                        outbuffer[i * alac.numchannels * 3 + 4] = 0;
-                        outbuffer[i * alac.numchannels * 3 + 5] = 0;
+                        outbuffer[i * alac.getNumChannels() * 3 + 3] = 0;
+                        outbuffer[i * alac.getNumChannels() * 3 + 4] = 0;
+                        outbuffer[i * alac.getNumChannels() * 3 + 5] = 0;
 
                     }
                     break;
@@ -695,7 +695,7 @@ class AlacDecodeUtils {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputsamples = readbits(alac, 32);
-                outputsize = outputsamples * alac.bytespersample;
+                outputsize = outputsamples * alac.getBytesPerSample();
             }
 
             int readsamplesize = alac.setinfo_sample_size - uncompressed_bytes * 8 + 1;
@@ -822,11 +822,11 @@ class AlacDecodeUtils {
 
             switch (alac.setinfo_sample_size) {
                 case 16: {
-                    deinterlace_16(alac.outputsamples_buffer_a, alac.outputsamples_buffer_b, outbuffer, alac.numchannels, outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace_16(alac.outputsamples_buffer_a, alac.outputsamples_buffer_b, outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 24: {
-                    deinterlace_24(alac.outputsamples_buffer_a, alac.outputsamples_buffer_b, uncompressed_bytes, alac.uncompressed_bytes_buffer_a, alac.uncompressed_bytes_buffer_b, outbuffer, alac.numchannels, outputsamples, interlacing_shift, interlacing_leftweight);
+                    deinterlace_24(alac.outputsamples_buffer_a, alac.outputsamples_buffer_b, uncompressed_bytes, alac.uncompressed_bytes_buffer_a, alac.uncompressed_bytes_buffer_b, outbuffer, alac.getNumChannels(), outputsamples, interlacing_shift, interlacing_leftweight);
                     break;
                 }
                 case 20:
@@ -838,16 +838,6 @@ class AlacDecodeUtils {
             }
         }
         return outputsize;
-    }
-
-    public static AlacFileData create_alac(int samplesize, int numchannels) {
-        AlacFileData newfile = new AlacFileData();
-
-        newfile.samplesize = samplesize;
-        newfile.numchannels = numchannels;
-        newfile.bytespersample = samplesize / 8 * numchannels;
-
-        return newfile;
     }
 }
 
