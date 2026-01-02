@@ -26,7 +26,7 @@ class AlacDecodeUtils {
         /* shift left by the number of bits we've already read,
          * so that the top 'n' bits of the 24 bits we read will
          * be the return bits */
-        result = result << alac.inputBufferBitaccumulator;
+        result = result << alac.getInputBufferBitaccumulator();
 
         result = result & 0x00ffffff;
 
@@ -34,13 +34,13 @@ class AlacDecodeUtils {
          * n is 'bits' */
         result = result >> 24 - bits;
 
-        int new_accumulator = alac.inputBufferBitaccumulator + bits;
+        int new_accumulator = alac.getInputBufferBitaccumulator() + bits;
 
         /* increase the buffer pointer if we've read over n bytes. */
         alac.ibIdx += new_accumulator >> 3;
 
         /* and the remainder goes back into the bit accumulator */
-        alac.inputBufferBitaccumulator = new_accumulator & 7;
+        alac.setInputBufferBitaccumulator(new_accumulator & 7);
 
         return result;
     }
@@ -65,25 +65,25 @@ class AlacDecodeUtils {
 
         int result = alac.getInputBuffer()[alac.ibIdx] & 0xff;
 
-        result = result << alac.inputBufferBitaccumulator;
+        result = result << alac.getInputBufferBitaccumulator();
 
         result = result >> 7 & 1;
 
-        int new_accumulator = alac.inputBufferBitaccumulator + 1;
+        int new_accumulator = alac.getInputBufferBitaccumulator() + 1;
 
         alac.ibIdx += new_accumulator / 8;
 
-        alac.inputBufferBitaccumulator = new_accumulator % 8;
+        alac.setInputBufferBitaccumulator(new_accumulator % 8);
 
         return result;
     }
 
     static void unreadbits(AlacFileData alac) {
-        int new_accumulator = alac.inputBufferBitaccumulator - 1;
+        int new_accumulator = alac.getInputBufferBitaccumulator() - 1;
 
         alac.ibIdx += new_accumulator >> 3;
 
-        alac.inputBufferBitaccumulator = new_accumulator & 7;
+        alac.setInputBufferBitaccumulator(new_accumulator & 7);
     }
 
     static void count_leading_zeros_extra(int curbyte, int output, LeadingZeros lz) {
@@ -463,7 +463,7 @@ class AlacDecodeUtils {
 
         /* setup the stream */
         alac.setInputBuffer(inbuffer);
-        alac.inputBufferBitaccumulator = 0;
+        alac.setInputBufferBitaccumulator(0);
         alac.ibIdx = 0;
 
         int channels = readbits(alac, 3);
