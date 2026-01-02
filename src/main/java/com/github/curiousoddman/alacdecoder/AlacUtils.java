@@ -24,7 +24,7 @@ public class AlacUtils {
     public static final int DEST_BUFFER_SIZE = 1024 * 24 * 3;
 
     public static AlacContext alacOpenFileInput(String inputFileName) throws IOException {
-        DemuxResT demuxResT = new DemuxResT();
+        DemuxRes demuxRes = new DemuxRes();
         AlacContext ac = new AlacContext();
 
         AlacInputStream alacInputStream = new AlacInputStream(
@@ -35,13 +35,11 @@ public class AlacUtils {
 
         /* if qtmovie_read returns successfully, the stream is up to
          * the movie data, which can be used directly by the decoder */
-        int headerRead = DemuxUtils.qtmovieRead(
-                new QTMovieT(new DataInputStreamWrapper(alacInputStream)),
-                demuxResT
-        );
+        int headerRead = new QTMovie(new DataInputStreamWrapper(alacInputStream))
+                .read(demuxRes);
 
         if (headerRead == 0) {
-            if (demuxResT.getFormatRead() == 0) {
+            if (demuxRes.getFormatRead() == 0) {
                 throw new IOException("Failed to load the QuickTime movie headers.");
             } else {
                 throw new IOException("Error while loading the QuickTime movie headers.");
@@ -60,17 +58,17 @@ public class AlacUtils {
             );
             ac.setAlacInputStream(alacInputStream);
 
-            QTMovieT qtmovie = new QTMovieT(new DataInputStreamWrapper(alacInputStream));
+            QTMovie qtmovie = new QTMovie(new DataInputStreamWrapper(alacInputStream));
             qtmovie.getQtstream().skip(qtmovie.getSavedMdatPos());
         }
 
         /* initialise the sound converter */
 
-        AlacFileData alac = AlacDecodeUtils.create_alac(demuxResT.getSampleSize(), demuxResT.getNumChannels());
+        AlacFileData alac = AlacDecodeUtils.create_alac(demuxRes.getSampleSize(), demuxRes.getNumChannels());
 
-        AlacDecodeUtils.alac_set_info(alac, demuxResT.getCodecData());
+        AlacDecodeUtils.alac_set_info(alac, demuxRes.getCodecData());
 
-        ac.setDemuxRes(demuxResT);
+        ac.setDemuxRes(demuxRes);
         ac.setAlacFileData(alac);
 
         return ac;
@@ -115,7 +113,7 @@ public class AlacUtils {
      */
 
     public static void AlacSetPosition(AlacContext ac, long position) throws IOException {
-        DemuxResT res = ac.getDemuxRes();
+        DemuxRes res = ac.getDemuxRes();
 
         int current_position = 0;
         int current_sample = 0;

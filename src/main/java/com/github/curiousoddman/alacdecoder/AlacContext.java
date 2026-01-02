@@ -20,7 +20,7 @@ import java.io.IOException;
 
 @Data
 public class AlacContext implements AutoCloseable {
-    private DemuxResT demuxRes = new DemuxResT();
+    private DemuxRes demuxRes = new DemuxRes();
     private AlacFileData alacFileData = new AlacFileData();
     private AlacInputStream alacInputStream;
     private int currentSampleBlock = 0;

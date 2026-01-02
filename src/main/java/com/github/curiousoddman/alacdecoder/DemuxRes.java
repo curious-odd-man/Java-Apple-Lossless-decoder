@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class DemuxResT {
+public class DemuxRes {
     private final List<SampleInfo> timeToSample = new ArrayList<>();
 
     private int formatRead;
