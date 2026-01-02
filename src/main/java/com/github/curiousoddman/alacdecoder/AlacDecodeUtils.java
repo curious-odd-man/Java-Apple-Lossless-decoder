@@ -39,7 +39,7 @@ class AlacDecodeUtils {
         int new_accumulator = alac.getInputBufferBitaccumulator() + bits;
 
         /* increase the buffer pointer if we've read over n bytes. */
-        alac.ibIdx += new_accumulator >> 3;
+        alac.setIbIdx(alac.ibIdx + (new_accumulator >> 3));
 
         /* and the remainder goes back into the bit accumulator */
         alac.setInputBufferBitaccumulator(new_accumulator & 7);
@@ -73,7 +73,7 @@ class AlacDecodeUtils {
 
         int new_accumulator = alac.getInputBufferBitaccumulator() + 1;
 
-        alac.ibIdx += new_accumulator / 8;
+        alac.setIbIdx(alac.ibIdx + new_accumulator / 8);
 
         alac.setInputBufferBitaccumulator(new_accumulator % 8);
 
@@ -83,7 +83,7 @@ class AlacDecodeUtils {
     static void unreadbits(AlacFileData alac) {
         int new_accumulator = alac.getInputBufferBitaccumulator() - 1;
 
-        alac.ibIdx += new_accumulator >> 3;
+        alac.setIbIdx(alac.ibIdx + (new_accumulator >> 3));
 
         alac.setInputBufferBitaccumulator(new_accumulator & 7);
     }
