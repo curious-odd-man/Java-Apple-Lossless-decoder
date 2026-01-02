@@ -60,7 +60,7 @@ public class AlacUtils {
 
         AlacFileData alac = new AlacFileData(demuxRes.getSampleSize(), demuxRes.getNumChannels());
 
-        AlacDecodeUtils.alac_set_info(alac, demuxRes.getCodecData());
+        alac.setInfo(demuxRes.getCodecData());
 
         ac.setDemuxRes(demuxRes);
         ac.setAlacFileData(alac);

@@ -24,40 +24,68 @@ public class AlacFileData {
     private final int[] predictorCoefTableA = new int[1024];
     private final int[] predictorCoefTableB = new int[1024];
 
-    private final int[] predicterrorBufferA = new int[BUFFER_SIZE];
-    private final int[] predicterrorBufferB = new int[BUFFER_SIZE];
+    private final int[] predictErrorBufferA = new int[BUFFER_SIZE];
+    private final int[] predictErrorBufferB = new int[BUFFER_SIZE];
     private final int[] uncompressedBytesBufferA = new int[BUFFER_SIZE];
     private final int[] uncompressedBytesBufferB = new int[BUFFER_SIZE];
+
+    private int maxSamplesPerFrame = 0; // 0x1000 = 4096
+    private int sevenA = 0; // 0x00
+    private int sampleSizeRaw = 0; // 0x10
+    private int riceHistorymult = 0; // 0x28
+    private int riceInitialhistory = 0; // 0x0a
+    private int riceKmodifier = 0; // 0x0e
+    private int sevenF = 0; // 0x02
+    private int eight0 = 0; // 0x00ff
+    private int eight2 = 0; // 0x000020e7
+    private int eight6 = 0; // 0x00069fe4
+    private int eigthARate = 0; // 0x0000ac44
 
     public byte[] inputBuffer;
     public int ibIdx = 0;
     public int inputBufferBitaccumulator = 0; /* used so we can do arbitary
 						bit reads */
     public final LeadingZeros lz = new LeadingZeros();
-    /* stuff from setinfo */
-    public int setInfoMaxSamplesPerFrame = 0; // 0x1000 = 4096
-    public int setInfo7A = 0; // 0x00
-    public int setInfoSampleSize = 0; // 0x10
-    public int setInfoRiceHistorymult = 0; // 0x28
-    public int setInfoRiceInitialhistory = 0; // 0x0a
-    /* max samples per frame? */
-    public int setInfoRiceKmodifier = 0; // 0x0e
-    public int setInfo7F = 0; // 0x02
-    public int setInfo80 = 0; // 0x00ff
-    public int setInfo82 = 0; // 0x000020e7
-    /* max sample size?? */
-    public int setInfo86 = 0; // 0x00069fe4
-    /* bit rate (avarge)?? */
-    public int setInfo8ARate = 0; // 0x0000ac44
 
     public int[] outputSamplesBufferA = new int[BUFFER_SIZE];
     /* end setinfo stuff */
     public int[] outputSamplesBufferB = new int[BUFFER_SIZE];
 
-
     public AlacFileData(int sampleSize, int numChannels) {
         this.sampleSize = sampleSize;
         this.numChannels = numChannels;
         this.bytesPerSample = sampleSize / 8 * numChannels;
+    }
+
+    public void setInfo(int[] inputBuffer) {
+        int ptrIndex = 0;
+        ptrIndex += 4; // size
+        ptrIndex += 4; // frma
+        ptrIndex += 4; // alac
+        ptrIndex += 4; // size
+        ptrIndex += 4; // alac
+        ptrIndex += 4; // 0 ?
+
+        maxSamplesPerFrame = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3]; // buffer size / 2 ?
+        ptrIndex += 4;
+        sevenA = inputBuffer[ptrIndex];
+        ptrIndex += 1;
+        sampleSizeRaw = inputBuffer[ptrIndex];
+        ptrIndex += 1;
+        riceHistorymult = inputBuffer[ptrIndex] & 0xff;
+        ptrIndex += 1;
+        riceInitialhistory = inputBuffer[ptrIndex] & 0xff;
+        ptrIndex += 1;
+        riceKmodifier = inputBuffer[ptrIndex] & 0xff;
+        ptrIndex += 1;
+        sevenF = inputBuffer[ptrIndex];
+        ptrIndex += 1;
+        eight0 = (inputBuffer[ptrIndex] << 8) + inputBuffer[ptrIndex + 1];
+        ptrIndex += 2;
+        eight2 = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
+        ptrIndex += 4;
+        eight6 = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
+        ptrIndex += 4;
+        eigthARate = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
     }
 }
