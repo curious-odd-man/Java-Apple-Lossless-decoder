@@ -263,8 +263,6 @@ class AlacDecodeUtils {
     }
 
     static int[] predictor_decompress_fir_adapt(int[] buffer_out, int output_size, int readsamplesize, int[] predictor_coef_table, int predictor_coef_num, int predictor_quantitization) {
-        int buffer_out_idx;
-        int bitsmove;
 
         /* first sample always copies */
 
@@ -277,6 +275,7 @@ class AlacDecodeUtils {
             return buffer_out;
         }
 
+        int bitsmove;
         if (predictor_coef_num == 0x1f) // 11111 - max value of predictor_coef_num
         {
             /* second-best case scenario for fir decompression,
@@ -313,18 +312,16 @@ class AlacDecodeUtils {
 
         /* general case */
         if (predictor_coef_num > 0) {
-            buffer_out_idx = 0;
+            int buffer_out_idx = 0;
             for (int i = predictor_coef_num + 1; i < output_size; i++) {
-                int j;
                 int sum = 0;
-                int outval;
                 int error_val = buffer_out[i];
 
-                for (j = 0; j < predictor_coef_num; j++) {
+                for (int j = 0; j < predictor_coef_num; j++) {
                     sum += (buffer_out[buffer_out_idx + predictor_coef_num - j] - buffer_out[buffer_out_idx]) * predictor_coef_table[j];
                 }
 
-                outval = (1 << predictor_quantitization - 1) + sum;
+                int outval = (1 << predictor_quantitization - 1) + sum;
                 outval = outval >> predictor_quantitization;
                 outval = outval + buffer_out[buffer_out_idx] + error_val;
                 bitsmove = 32 - readsamplesize;
@@ -477,10 +474,6 @@ class AlacDecodeUtils {
         if (channels == 0) // 1 channel
         {
 
-            int ricemodifier;
-
-            int tempPred;
-
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
@@ -505,7 +498,6 @@ class AlacDecodeUtils {
 
             if (isnotcompressed == 0) { // so it is compressed
                 int[] predictor_coef_table = alac.getPredictorCoefTable();
-                int i;
 
                 /* skip 16 bits, not sure what they are. seem to be used in
                  * two channel case */
@@ -515,13 +507,14 @@ class AlacDecodeUtils {
                 int prediction_type = readbits(alac, 4);
                 int prediction_quantitization = readbits(alac, 4);
 
-                ricemodifier = readbits(alac, 3);
+                int ricemodifier = readbits(alac, 3);
                 int predictor_coef_num = readbits(alac, 5);
 
                 /* read the predictor table */
 
+                int i;
                 for (i = 0; i < predictor_coef_num; i++) {
-                    tempPred = readbits(alac, 16);
+                    int tempPred = readbits(alac, 16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -554,27 +547,24 @@ class AlacDecodeUtils {
 
             } else { // not compressed, easy case
                 if (alac.getSampleSizeRaw() <= 16) {
-                    int bitsmove;
                     for (int i = 0; i < outputsamples; i++) {
                         int audiobits = readbits(alac, alac.getSampleSizeRaw());
-                        bitsmove = 32 - alac.getSampleSizeRaw();
+                        int bitsmove = 32 - alac.getSampleSizeRaw();
 
                         audiobits = audiobits << bitsmove >> bitsmove;
 
                         alac.outputSamplesBufferA[i] = audiobits;
                     }
                 } else {
-                    int x;
                     int m = 1 << 24 - 1;
                     for (int i = 0; i < outputsamples; i++) {
-                        int audiobits;
 
-                        audiobits = readbits(alac, 16);
+                        int audiobits = readbits(alac, 16);
                         /* special case of sign extension..
                          * as we'll be ORing the low 16bits into this */
                         audiobits = audiobits << alac.getSampleSizeRaw() - 16;
                         audiobits = audiobits | readbits(alac, alac.getSampleSizeRaw() - 16);
-                        x = audiobits & (1 << 24) - 1;
+                        int x = audiobits & (1 << 24) - 1;
                         audiobits = (x ^ m) - m;    // sign extend 24 bits
 
                         alac.outputSamplesBufferA[i] = audiobits;
@@ -636,9 +626,6 @@ class AlacDecodeUtils {
         } else if (channels == 1) // 2 channels
         {
 
-            int interlacing_shift;
-            int interlacing_leftweight;
-
             /* 2^result = something to do with output waiting.
              * perhaps matters if we read > 1 frame in a pass?
              */
@@ -661,12 +648,12 @@ class AlacDecodeUtils {
 
             int readsamplesize = alac.getSampleSizeRaw() - uncompressed_bytes * 8 + 1;
 
+            int interlacing_leftweight;
+            int interlacing_shift;
             if (isnotcompressed == 0) { // compressed
                 int[] predictor_coef_table_a = alac.getPredictorCoefTableA();
 
                 int[] predictor_coef_table_b = alac.getPredictorCoefTableB();
-
-                int tempPred;
 
                 interlacing_shift = readbits(alac, 8);
                 interlacing_leftweight = readbits(alac, 8);
@@ -680,6 +667,7 @@ class AlacDecodeUtils {
 
                 /* read the predictor table */
 
+                int tempPred;
                 for (int i = 0; i < predictor_coef_num_a; i++) {
                     tempPred = readbits(alac, 16);
                     if (tempPred > 32767) {
@@ -737,14 +725,13 @@ class AlacDecodeUtils {
                 }
             } else { // not compressed, easy case
                 if (alac.getSampleSizeRaw() <= 16) {
-                    int bitsmove;
 
                     for (int i = 0; i < outputsamples; i++) {
 
                         int audiobits_a = readbits(alac, alac.getSampleSizeRaw());
                         int audiobits_b = readbits(alac, alac.getSampleSizeRaw());
 
-                        bitsmove = 32 - alac.getSampleSizeRaw();
+                        int bitsmove = 32 - alac.getSampleSizeRaw();
 
                         audiobits_a = audiobits_a << bitsmove >> bitsmove;
                         audiobits_b = audiobits_b << bitsmove >> bitsmove;
@@ -753,20 +740,17 @@ class AlacDecodeUtils {
                         alac.outputSamplesBufferB[i] = audiobits_b;
                     }
                 } else {
-                    int x;
                     int m = 1 << 24 - 1;
 
                     for (int i = 0; i < outputsamples; i++) {
-                        int audiobits_a;
-                        int audiobits_b;
 
-                        audiobits_a = readbits(alac, 16);
+                        int audiobits_a = readbits(alac, 16);
                         audiobits_a = audiobits_a << alac.getSampleSizeRaw() - 16;
                         audiobits_a = audiobits_a | readbits(alac, alac.getSampleSizeRaw() - 16);
-                        x = audiobits_a & (1 << 24) - 1;
+                        int x = audiobits_a & (1 << 24) - 1;
                         audiobits_a = (x ^ m) - m;        // sign extend 24 bits
 
-                        audiobits_b = readbits(alac, 16);
+                        int audiobits_b = readbits(alac, 16);
                         audiobits_b = audiobits_b << alac.getSampleSizeRaw() - 16;
                         audiobits_b = audiobits_b | readbits(alac, alac.getSampleSizeRaw() - 16);
                         x = audiobits_b & (1 << 24) - 1;
