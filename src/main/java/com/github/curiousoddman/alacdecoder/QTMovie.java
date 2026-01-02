@@ -49,7 +49,7 @@ public class QTMovie {
             } else if (chunkId == makeFourCC(109, 111, 111, 118)) {   // fourcc equals moov
                 readChunkMoov(chunkLen);
                 if (foundMdat) {
-                    return setSavedMdat();
+                    return setSavedMdat().ordinal() + 1;
                 }
                 foundMoov = true;
             }
@@ -477,32 +477,25 @@ public class QTMovie {
         }
     }
 
-    void readChunkMdat(int chunk_len, boolean skipMdat) throws IOException {
-        int size_remaining = chunk_len - 8; // FIXME WRONG
-
-        if (size_remaining == 0) {
+    void readChunkMdat(int chunkLen, boolean skipMdat) throws IOException {
+        int sizeRemaining = chunkLen - 8; // FIXME WRONG
+        if (sizeRemaining == 0) {
             return;
         }
 
-        res.setMdatLen(size_remaining);
+        res.setMdatLen(sizeRemaining);
         if (skipMdat) {
             setSavedMdatPos(qtstream.getCurrentPos());
-            qtstream.skip(size_remaining);
+            qtstream.skip(sizeRemaining);
         }
     }
 
-    int setSavedMdat() {
-        // returns as follows
-        // 1 - all ok
-        // 2 - do not have valid saved mdat pos
-        // 3 - have valid saved mdat pos, but cannot seek there - need to close/reopen stream
-
+    MdatStatus setSavedMdat() {
         if (getSavedMdatPos() == -1) {
-            System.err.println("stream contains mdat before moov but is not seekable");
-            return 2;
+            return MdatStatus.NO_VALID_POS;
         }
 
-        return 3;
+        return MdatStatus.CANNOT_SEEK;
     }
 
     private void skipChunkMinus8(int chunkLen) throws IOException {
