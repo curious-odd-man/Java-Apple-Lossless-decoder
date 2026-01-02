@@ -218,56 +218,37 @@ public class QTMovie {
         }
     }
 
-    void read_chunk_stts(int chunk_len) throws IOException {
-
-        /* version */
-        qtstream.readUint8();
+    void readChunkStts(int chunkLen) throws IOException {
+        /* version 1 byte*/
+        /* flags  3 bytes */
+        qtstream.skip(4);
         // FIXME WRONG
-        int size_remaining = chunk_len - 8;
-        size_remaining -= 1;
-        /* flags */
-        qtstream.readUint8();
-        qtstream.readUint8();
-        qtstream.readUint8();
-        size_remaining -= 3;
+        int sizeRemaining = chunkLen - 8;
+        sizeRemaining -= 4;
 
-        int numentries = 0;
-        try {
-            numentries = qtstream.readUint32();
-        } catch (Exception e) {
-            System.err.println("(read_chunk_stts) error reading numentries - possibly number too large");
-        }
+        int numEntries = qtstream.readUint32();
+        sizeRemaining -= 4;
 
-        size_remaining -= 4;
-
-        res.setNumTimeToSamples(numentries);
-
-        for (int i = 0; i < numentries; i++) {
+        for (int i = 0; i < numEntries; i++) {
             SampleInfo sampleInfo = new SampleInfo();
             sampleInfo.setSampleCount(qtstream.readUint32());
             sampleInfo.setSampleDuration(qtstream.readUint32());
             res.getTimeToSample().add(sampleInfo);
-            size_remaining -= 8;
+            sizeRemaining -= 8;
         }
 
-        if (size_remaining != 0) {
-            System.err.println("(read_chunk_stts) size remaining?");
-            qtstream.skip(size_remaining);
+        if (sizeRemaining != 0) {
+            log.error("(read_chunk_stts) size remaining is not 0");
+            qtstream.skip(sizeRemaining);
         }
     }
 
-    void read_chunk_stsz(int chunk_len) throws IOException {
-
-        /* version */
-        qtstream.readUint8();
-        // FIXME WRONG
-        int size_remaining = chunk_len - 8;
-        size_remaining -= 1;
-        /* flags */
-        qtstream.readUint8();
-        qtstream.readUint8();
-        qtstream.readUint8();
-        size_remaining -= 3;
+    void read_chunk_stsz(int chunkLen) throws IOException {
+        /* version 1 byte*/
+        /* flags  3 bytes */
+        qtstream.skip(4);
+        int sizeRemaining = chunkLen - 8;
+        sizeRemaining -= 4;
 
         /* default sample size */
         int uniform_size = (qtstream.readUint32());
@@ -287,7 +268,7 @@ public class QTMovie {
             }
             return;
         }
-        size_remaining -= 4;
+        sizeRemaining -= 4;
 
         int numentries = 0;
         try {
@@ -296,30 +277,30 @@ public class QTMovie {
             System.err.println("(read_chunk_stsz) error reading numentries - possibly number too large");
         }
 
-        size_remaining -= 4;
+        sizeRemaining -= 4;
 
         res.setSampleByteSize(new int[numentries]);
 
         for (i = 0; i < numentries; i++) {
             res.getSampleByteSize()[i] = (qtstream.readUint32());
 
-            size_remaining -= 4;
+            sizeRemaining -= 4;
         }
 
-        if (size_remaining != 0) {
+        if (sizeRemaining != 0) {
             System.err.println("(read_chunk_stsz) size remaining?");
-            qtstream.skip(size_remaining);
+            qtstream.skip(sizeRemaining);
         }
     }
 
-    int read_chunk_stbl(int chunk_len) throws IOException {
-        int size_remaining = chunk_len - 8; // FIXME WRONG
+    int read_chunk_stbl(int chunkLen) throws IOException {
+        int size_remaining = chunkLen - 8; // FIXME WRONG
 
         while (size_remaining != 0) {
             int sub_chunk_len;
 
             try {
-                sub_chunk_len = (qtstream.readUint32());
+                sub_chunk_len = qtstream.readUint32();
             } catch (Exception e) {
                 System.err.println("(read_chunk_stbl) error reading sub_chunk_len - possibly number too large");
                 sub_chunk_len = 0;
@@ -335,7 +316,7 @@ public class QTMovie {
             if (sub_chunk_id == makeFourCC(115, 116, 115, 100)) {   // fourcc equals stsd
                 readChunkStsd();
             } else if (sub_chunk_id == makeFourCC(115, 116, 116, 115)) {  // fourcc equals stts
-                read_chunk_stts(sub_chunk_len);
+                readChunkStts(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(115, 116, 115, 122)) { // fourcc equals stsz
                 read_chunk_stsz(sub_chunk_len);
             } else if (sub_chunk_id == makeFourCC(115, 116, 115, 99)) {  // fourcc equals stsc

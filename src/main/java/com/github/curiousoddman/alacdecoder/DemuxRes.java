@@ -27,8 +27,6 @@ public class DemuxRes {
     private int sampleRate;
     private int format;
 
-    private int numTimeToSamples;
-
     private int[] sampleByteSize;
 
     private int codecDataLen;
@@ -45,7 +43,7 @@ public class DemuxRes {
             throw new IllegalStateException("sample " + sampleIndex + " does not exist ");
         }
 
-        if (getNumTimeToSamples() == 0) {
+        if (getTimeToSample().isEmpty()) {
             throw new IllegalStateException("no time to samples");
         }
 
@@ -54,7 +52,7 @@ public class DemuxRes {
         while ((getTimeToSample().get(durationCurIndex).getSampleCount() + durationIndexAccum) <= sampleIndex) {
             durationIndexAccum += getTimeToSample().get(durationCurIndex).getSampleCount();
             durationCurIndex++;
-            if (durationCurIndex >= getNumTimeToSamples()) {
+            if (durationCurIndex >= getTimeToSample().size()) {
                 throw new IllegalStateException("sample " + sampleIndex + " does not have a duration");
             }
         }
