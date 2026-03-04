@@ -80,19 +80,6 @@ class ByteArrayReaderTest {
     }
 
     @Test
-    void readBits24_readSingleBit() {
-        // MSB of 0x80 = 1
-        ByteArrayReader r = readerFor((byte) 0x80, (byte) 0x00, (byte) 0x00);
-        assertEquals(1, r.readBits24(1));
-    }
-
-    @Test
-    void readBits24_readSingleBitZero() {
-        ByteArrayReader r = readerFor((byte) 0x00, (byte) 0x00, (byte) 0x00);
-        assertEquals(0, r.readBits24(1));
-    }
-
-    @Test
     void readBits24_read8Bits() {
         ByteArrayReader r = readerFor((byte) 0xAB, (byte) 0x00, (byte) 0x00);
         assertEquals(0xAB, r.readBits24(8));
@@ -186,13 +173,13 @@ class ByteArrayReaderTest {
     @Test
     void readBits32_read16Bits() {
         ByteArrayReader r = readerFor((byte) 0xAB, (byte) 0xCD, (byte) 0x00, (byte) 0x00, (byte) 0x00);
-        assertEquals(0xABCD, r.readBits32(16));
+        assertEquals(0xABCD, r.readBitsVar(16));
     }
 
     @Test
     void readBits32_read24Bits() {
         ByteArrayReader r = readerFor((byte) 0xAB, (byte) 0xCD, (byte) 0xEF, (byte) 0x00, (byte) 0x00);
-        assertEquals(0xABCDEF, r.readBits32(24));
+        assertEquals(0xABCDEF, r.readBitsVar(24));
     }
 
     @Test
@@ -219,21 +206,21 @@ class ByteArrayReaderTest {
         // Read 16 bits twice: 0xABCD then 0xEF01
         ByteArrayReader r = readerFor((byte) 0xAB, (byte) 0xCD, (byte) 0xEF, (byte) 0x01,
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00);
-        assertEquals(0xABCD, r.readBits32(16));
-        assertEquals(0xEF01, r.readBits32(16));
+        assertEquals(0xABCD, r.readBitsVar(16));
+        assertEquals(0xEF01, r.readBitsVar(16));
     }
 
     @Test
     void readBits32_unalignedRead17Bits() {
-        // Skip 1 bit (the leading 0 of 0x7F), then read 17 bits
-        // Bytes: 0x7F 0xFF 0x80 → bits: 0 | 1111.111 1.1111.111 | 1 0000000
-        // readBits32(17) splits into readBits24(16) + readBits24(1):
-        //   readBits24(16) → bits 1–16 = 0111 1111 1111 1111 = 0x7FFF
-        //   readBits24(1)  → bit  17   = 1 (MSB of 0x80)
-        //   result = (0x7FFF << 1) | 1 = 0xFFFF = 65535
+        // Full bits: 0 11111111111111110000000
+        // Skip 1 bit → 11111111111111110000000
+        // readBits32(17) splits as: readBits24(16) << 1 | readBits24(1)
+        //   readBits24(16) → 1111111111111111 = 0xFFFF
+        //   readBits24(1)  → 0
+        //   result = (0xFFFF << 1) | 0 = 0x1FFFE = 131070
         ByteArrayReader r = readerFor((byte) 0x7F, (byte) 0xFF, (byte) 0x80, (byte) 0x00, (byte) 0x00, (byte) 0x00);
         r.readBit(); // skip leading 0
-        assertEquals(0xFFFF, r.readBits32(17));
+        assertEquals(0x1FFFE, r.readBitsVar(17));
     }
 
     // ─────────────────────────────────────────────

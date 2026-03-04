@@ -100,13 +100,13 @@ public class AlacFileData {
 
         if (decodedValue > Defines.RICE_THRESHOLD) {
             // read the number from the bit stream (raw value)
-            int value = byteArrayReader.readBits32(readSampleSize);
+            int value = byteArrayReader.readBitsVar(readSampleSize);
             // mask value
             value &= 0xffffffff >> 32 - readSampleSize;
             decodedValue = value;
         } else {
             if (k != 1) {
-                int extraBits = byteArrayReader.readBits32(k);
+                int extraBits = byteArrayReader.readBitsVar(k);
 
                 decodedValue *= (1 << k) - 1 & riceKmodifierMask;
 
@@ -182,10 +182,10 @@ public class AlacFileData {
 
     private FrameHeader decodeFrameHeader(int outputSamples, int outputSizeBytes) {
         byteArrayReader.readBits24(4);
-        byteArrayReader.readBits32(12); // unknown, skip 12 bits
+        byteArrayReader.readBits24(12); // unknown, skip 12 bits
 
         int hasSize = byteArrayReader.readBit(); // the output sample size is stored soon
-        int uncompressedBytes = byteArrayReader.readBits32(2); // number of bytes in the (compressed) stream that are not compressed
+        int uncompressedBytes = byteArrayReader.readBits24(2); // number of bytes in the (compressed) stream that are not compressed
         int isNotCompressed = byteArrayReader.readBit(); // whether the frame is compressed
 
         if (hasSize != 0) {
@@ -220,7 +220,7 @@ public class AlacFileData {
         byteArrayReader = new ByteArrayReader(inBuffer);
         int outputSizeBytes;
 
-        int channels = byteArrayReader.readBits32(3);
+        int channels = byteArrayReader.readBits24(3);
 
         if (channels == 0) {// 1 channel
             FrameHeader frameHeader = decodeFrameHeader(maxSamplesPerFrame, maxSamplesPerFrame * bytesPerSample);
@@ -237,14 +237,14 @@ public class AlacFileData {
                 int predictionType = byteArrayReader.readBits24(4);
                 int predictionQuantization = byteArrayReader.readBits24(4);
 
-                int riceModifier = byteArrayReader.readBits32(3);
-                int predictorCoefNum = byteArrayReader.readBits32(5);
+                int riceModifier = byteArrayReader.readBits24(3);
+                int predictorCoefNum = byteArrayReader.readBits24(5);
 
                 /* read the predictor table */
 
                 int i;
                 for (i = 0; i < predictorCoefNum; i++) {
-                    int tempPred = byteArrayReader.readBits32(16);
+                    int tempPred = byteArrayReader.readBits24(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -255,7 +255,7 @@ public class AlacFileData {
 
                 if (uncompressedBytes != 0) {
                     for (i = 0; i < outputSamples; i++) {
-                        uncompressedBytesBufferA[i] = byteArrayReader.readBits32(uncompressedBytes * 8);
+                        uncompressedBytesBufferA[i] = byteArrayReader.readBitsVar(uncompressedBytes * 8);
                     }
                 }
 
@@ -263,7 +263,7 @@ public class AlacFileData {
             } else { // not compressed, easy case
                 if (sampleSizeRaw <= 16) {
                     for (int i = 0; i < outputSamples; i++) {
-                        int audiobits = byteArrayReader.readBits32(sampleSizeRaw);
+                        int audiobits = byteArrayReader.readBitsVar(sampleSizeRaw);
                         int bitsmove = 32 - sampleSizeRaw;
 
                         audiobits = audiobits << bitsmove >> bitsmove;
@@ -352,14 +352,14 @@ public class AlacFileData {
                 int predictionTypeA = byteArrayReader.readBits24(4);
                 int predictionQuantitizationA = byteArrayReader.readBits24(4);
 
-                int ricemodifierA = byteArrayReader.readBits32(3);
-                int predictorCoefNumA = byteArrayReader.readBits32(5);
+                int ricemodifierA = byteArrayReader.readBits24(3);
+                int predictorCoefNumA = byteArrayReader.readBits24(5);
 
                 /* read the predictor table */
 
                 int tempPred;
                 for (int i = 0; i < predictorCoefNumA; i++) {
-                    tempPred = byteArrayReader.readBits32(16);
+                    tempPred = byteArrayReader.readBits24(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -371,13 +371,13 @@ public class AlacFileData {
                 int predictionTypeB = byteArrayReader.readBits24(4);
                 int predictionQuantitizationB = byteArrayReader.readBits24(4);
 
-                int ricemodifierB = byteArrayReader.readBits32(3);
-                int predictorCoefNumB = byteArrayReader.readBits32(5);
+                int ricemodifierB = byteArrayReader.readBits24(3);
+                int predictorCoefNumB = byteArrayReader.readBits24(5);
 
                 /* read the predictor table */
 
                 for (int i = 0; i < predictorCoefNumB; i++) {
-                    tempPred = byteArrayReader.readBits32(16);
+                    tempPred = byteArrayReader.readBits24(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -388,8 +388,8 @@ public class AlacFileData {
                 /* ********************/
                 if (uncompressedBytes != 0) { // see mono case
                     for (int i = 0; i < outputSamples; i++) {
-                        uncompressedBytesBufferA[i] = byteArrayReader.readBits32(uncompressedBytes * 8);
-                        uncompressedBytesBufferB[i] = byteArrayReader.readBits32(uncompressedBytes * 8);
+                        uncompressedBytesBufferA[i] = byteArrayReader.readBitsVar(uncompressedBytes * 8);
+                        uncompressedBytesBufferB[i] = byteArrayReader.readBitsVar(uncompressedBytes * 8);
                     }
                 }
 
@@ -413,8 +413,8 @@ public class AlacFileData {
 
                     for (int i = 0; i < outputSamples; i++) {
 
-                        int audiobits_a = byteArrayReader.readBits32(sampleSizeRaw);
-                        int audiobits_b = byteArrayReader.readBits32(sampleSizeRaw);
+                        int audiobits_a = byteArrayReader.readBitsVar(sampleSizeRaw);
+                        int audiobits_b = byteArrayReader.readBitsVar(sampleSizeRaw);
 
                         int bitsmove = 32 - sampleSizeRaw;
 
@@ -481,11 +481,11 @@ public class AlacFileData {
     }
 
     private int getAudioBits() {
-        int audioBits = byteArrayReader.readBits32(16);
+        int audioBits = byteArrayReader.readBits24(16);
         /* special case of sign extension..
          * as we'll be ORing the low 16bits into this */
         audioBits = audioBits << sampleSizeRaw - 16;
-        audioBits = audioBits | byteArrayReader.readBits32(sampleSizeRaw - 16);
+        audioBits = audioBits | byteArrayReader.readBitsVar(sampleSizeRaw - 16);
         return audioBits;
     }
 }

@@ -12,7 +12,7 @@ public class ByteArrayReader {
     /* supports reading 1 to 24 bits, in big endian format */
     public int readBits24(int bits) {
         if (bits <= 0 || bits > 24) {
-            throw new IllegalArgumentException("bits must be 1–24, got" + bits);
+            throw new IllegalArgumentException("bits must be 1–24, got " + bits);
         }
         int result = read3Bytes();
 
@@ -32,12 +32,7 @@ public class ByteArrayReader {
         return result;
     }
 
-    /* supports reading 1 to 32 bits, in big endian format */
-    public int readBits32(int bits) {
-        if (bits <= 0 || bits > 32) {
-            throw new IllegalArgumentException("bits must be 1–32, got " + bits);
-        }
-
+    public int readBitsVar(int bits) {
         int result = 0;
 
         if (bits > 16) {
@@ -46,8 +41,15 @@ public class ByteArrayReader {
         }
 
         result |= readBits24(bits);
-
         return result;
+    }
+
+    /* supports reading 24 to 32 bits, in big endian format */
+    public int readBits32(int bits) {
+        if (bits <= 24 || bits > 32) {
+            throw new IllegalArgumentException("bits must be 25–32, got " + bits);
+        }
+        return readBitsVar(bits);
     }
 
     /* reads a single bit */
