@@ -452,7 +452,7 @@ public class AlacFileData {
                     break;
                 }
                 case 24: {
-                    deinterlace24(outputSamplesBufferA, outputSamplesBufferB, uncompressedBytes, uncompressedBytesBufferA, uncompressedBytesBufferA, outBuffer, numChannels, outputSamples, interlacingShift, interlacingLeftWeight);
+                    deinterlace24(outputSamplesBufferA, outputSamplesBufferB, uncompressedBytes, uncompressedBytesBufferA, uncompressedBytesBufferB, outBuffer, numChannels, outputSamples, interlacingShift, interlacingLeftWeight);
                     break;
                 }
                 case 20:
