@@ -11,29 +11,29 @@
 
 package com.github.curiousoddman.alacdecoder.data;
 
-import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 @Data
 @RequiredArgsConstructor
 public class AlacContext implements AutoCloseable {
     private DemuxRes demuxRes = new DemuxRes();
     private AlacFileData alacFileData = new AlacFileData(0, 0);
-    private AlacInputStream alacInputStream;
+    private DataInputStreamWrapper inputStream;
     private int currentSampleBlock = 0;
     private byte[] readBuffer = new byte[1024 * 80]; // sample big enough to hold any input for a single alac frame
 
     private final long fileSize;
 
+    public void setInputStream(InputStream inputStream) {
+        this.inputStream = new DataInputStreamWrapper(inputStream, fileSize);
+    }
+
     public int unpackSamples(int[] destBuffer) throws IOException {
-        DataInputStreamWrapper inputStream = new DataInputStreamWrapper(alacInputStream, fileSize);
-
-        // if current_sample_block is beyond last block then finished
-
         if (currentSampleBlock >= demuxRes.getSampleByteSize().length) {
             return 0;
         }
@@ -95,9 +95,9 @@ public class AlacContext implements AutoCloseable {
 
     @Override
     public void close() {
-        if (alacInputStream != null) {
+        if (inputStream != null) {
             try {
-                alacInputStream.close();
+                inputStream.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

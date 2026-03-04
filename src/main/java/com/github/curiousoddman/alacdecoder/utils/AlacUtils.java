@@ -13,7 +13,6 @@ package com.github.curiousoddman.alacdecoder.utils;
 import com.github.curiousoddman.alacdecoder.data.AlacContext;
 import com.github.curiousoddman.alacdecoder.data.AlacFileData;
 import com.github.curiousoddman.alacdecoder.data.DemuxRes;
-import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import com.github.curiousoddman.alacdecoder.stream.QTMovie;
 
@@ -29,13 +28,12 @@ public class AlacUtils {
         DemuxRes demuxRes = new DemuxRes();
         AlacContext ac = new AlacContext(fileSize);
 
-        AlacInputStream alacInputStream = new AlacInputStream(streamSupplier.get());
-
-        ac.setAlacInputStream(alacInputStream);
+        InputStream inputStream = streamSupplier.get();
+        ac.setInputStream(inputStream);
 
         /* if qtmovie_read returns successfully, the stream is up to
          * the movie data, which can be used directly by the decoder */
-        QTMovie headerQtMovie = new QTMovie(new DataInputStreamWrapper(alacInputStream, fileSize));
+        QTMovie headerQtMovie = new QTMovie(new DataInputStreamWrapper(inputStream, fileSize));
         int headerRead = headerQtMovie.read(demuxRes);
 
         if (headerRead == 0) {
@@ -47,12 +45,12 @@ public class AlacUtils {
              ** skip bytes to go directly to that point
              */
 
-            ac.getAlacInputStream().close();
+            ac.getInputStream().close();
 
-            alacInputStream = new AlacInputStream(streamSupplier.get());
-            ac.setAlacInputStream(alacInputStream);
+            inputStream = streamSupplier.get();
+            ac.setInputStream(inputStream);
 
-            QTMovie qtmovie = new QTMovie(new DataInputStreamWrapper(alacInputStream, fileSize));
+            QTMovie qtmovie = new QTMovie(new DataInputStreamWrapper(inputStream, fileSize));
             qtmovie.getQtstream().skip(headerQtMovie.getSavedMdatPos());
         }
 

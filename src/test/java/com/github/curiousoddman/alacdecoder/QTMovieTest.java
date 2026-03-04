@@ -1,16 +1,12 @@
 package com.github.curiousoddman.alacdecoder;
 
 
-import com.github.curiousoddman.alacdecoder.stream.AlacInputStream;
 import com.github.curiousoddman.alacdecoder.stream.DataInputStreamWrapper;
 import com.github.curiousoddman.alacdecoder.stream.QTMovie;
 import com.github.curiousoddman.alacdecoder.utils.UnsupportedFormatException;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.makeFourCC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,7 +22,7 @@ class QTMovieTest {
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(data)) {
 
             // Mock the stream object
-            DataInputStreamWrapper streamWrapper = spy(new DataInputStreamWrapper(new DataInputStream(byteStream), data.length));
+            DataInputStreamWrapper streamWrapper = spy(new DataInputStreamWrapper(byteStream, data.length));
 
             // Mock QTMovie to return our streamWrapper
             QTMovie qtmovie = new QTMovie(streamWrapper);
@@ -57,10 +53,9 @@ class QTMovieTest {
     public void testReadChunkHdlr_NormalCase() throws IOException {
         int chunkLen = 50; // example chunk length
 
-        InputStream mock = mock();
+        FileInputStream mock = mock();
         when(mock.skip(anyLong())).thenAnswer(invocation -> (long)invocation.getArgument(0));
-        DataInputStream dataInputStream = new AlacInputStream(mock);
-        DataInputStreamWrapper streamWrapper = new DataInputStreamWrapper(dataInputStream, 100);
+        DataInputStreamWrapper streamWrapper = new DataInputStreamWrapper(mock, 100);
         QTMovie qtmovie = new QTMovie(streamWrapper);
 
         // Call the method

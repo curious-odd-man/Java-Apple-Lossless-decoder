@@ -32,7 +32,7 @@ import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.splitFourCC;
 public class QTMovie {
     private final DataInputStreamWrapper qtstream;
     private DemuxRes res;
-    private int savedMdatPos = 0;
+    private long savedMdatPos = 0;
 
     public int read(DemuxRes demuxRes) throws IOException {
         /* construct the stream */
