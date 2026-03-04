@@ -113,7 +113,7 @@ public class AlacFileData {
                 if (extraBits > 1) {
                     decodedValue += extraBits - 1;
                 } else {
-                    byteArrayReader.unreadbits();
+                    byteArrayReader.unreadBits();
                 }
             }
         }
@@ -181,12 +181,12 @@ public class AlacFileData {
     }
 
     private FrameHeader decodeFrameHeader(int outputSamples, int outputSizeBytes) {
-        byteArrayReader.readBits32(4);
+        byteArrayReader.readBits24(4);
         byteArrayReader.readBits32(12); // unknown, skip 12 bits
 
-        int hasSize = byteArrayReader.readBits32(1); // the output sample size is stored soon
+        int hasSize = byteArrayReader.readBit(); // the output sample size is stored soon
         int uncompressedBytes = byteArrayReader.readBits32(2); // number of bytes in the (compressed) stream that are not compressed
-        int isNotCompressed = byteArrayReader.readBits32(1); // whether the frame is compressed
+        int isNotCompressed = byteArrayReader.readBit(); // whether the frame is compressed
 
         if (hasSize != 0) {
             /* now read the number of samples,
@@ -231,11 +231,11 @@ public class AlacFileData {
             if (frameHeader.isNotCompressed == 0) { // so it is compressed
                 /* skip 16 bits, not sure what they are. seem to be used in
                  * two channel case */
-                byteArrayReader.readBits32(8);
-                byteArrayReader.readBits32(8);
+                byteArrayReader.readBits24(8);
+                byteArrayReader.readBits24(8);
 
-                int predictionType = byteArrayReader.readBits32(4);
-                int predictionQuantization = byteArrayReader.readBits32(4);
+                int predictionType = byteArrayReader.readBits24(4);
+                int predictionQuantization = byteArrayReader.readBits24(4);
 
                 int riceModifier = byteArrayReader.readBits32(3);
                 int predictorCoefNum = byteArrayReader.readBits32(5);
@@ -345,12 +345,12 @@ public class AlacFileData {
             int interlacingLeftWeight;
             int interlacingShift;
             if (frameHeader.isNotCompressed == 0) { // compressed
-                interlacingShift = byteArrayReader.readBits32(8);
-                interlacingLeftWeight = byteArrayReader.readBits32(8);
+                interlacingShift = byteArrayReader.readBits24(8);
+                interlacingLeftWeight = byteArrayReader.readBits24(8);
 
                 /* ******* channel 1 ***********/
-                int predictionTypeA = byteArrayReader.readBits32(4);
-                int predictionQuantitizationA = byteArrayReader.readBits32(4);
+                int predictionTypeA = byteArrayReader.readBits24(4);
+                int predictionQuantitizationA = byteArrayReader.readBits24(4);
 
                 int ricemodifierA = byteArrayReader.readBits32(3);
                 int predictorCoefNumA = byteArrayReader.readBits32(5);
@@ -368,8 +368,8 @@ public class AlacFileData {
                 }
 
                 /* ******* channel 2 *********/
-                int predictionTypeB = byteArrayReader.readBits32(4);
-                int predictionQuantitizationB = byteArrayReader.readBits32(4);
+                int predictionTypeB = byteArrayReader.readBits24(4);
+                int predictionQuantitizationB = byteArrayReader.readBits24(4);
 
                 int ricemodifierB = byteArrayReader.readBits32(3);
                 int predictorCoefNumB = byteArrayReader.readBits32(5);

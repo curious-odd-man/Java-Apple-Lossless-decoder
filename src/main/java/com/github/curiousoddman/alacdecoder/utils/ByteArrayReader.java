@@ -63,13 +63,16 @@ public class ByteArrayReader {
         return result;
     }
 
-    public void unreadbits() {
+    public void unreadBits() {
         int newAccumulator = inputBufferBitAccumulator - 1;
         inputBufferIndex += newAccumulator >> 3;
         inputBufferBitAccumulator = newAccumulator & 7;
     }
 
     private int read3Bytes() {
+        if (inputBuffer.length < inputBufferIndex + 2) {
+            throw new IndexOutOfBoundsException(inputBuffer.length + " < 2 + " + inputBufferIndex);
+        }
         return ((inputBuffer[inputBufferIndex] & 0xff) << 16)
                 | ((inputBuffer[inputBufferIndex + 1] & 0xff) << 8)
                 | (inputBuffer[inputBufferIndex + 2] & 0xff);
