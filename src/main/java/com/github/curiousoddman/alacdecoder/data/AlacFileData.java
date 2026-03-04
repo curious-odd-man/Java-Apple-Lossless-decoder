@@ -461,7 +461,10 @@ public class AlacFileData {
                 default:
             }
         } else {
-            throw new IllegalStateException("Unexpected count of channels");
+            throw new IllegalStateException(
+                    "Unexpected count of channels: " + channels +
+                            " (raw first byte: 0x" + Integer.toHexString(inBuffer[0] & 0xFF) + ")"
+            );
         }
         return outputSizeBytes;
     }

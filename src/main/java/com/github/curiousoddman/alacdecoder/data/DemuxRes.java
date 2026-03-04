@@ -59,4 +59,41 @@ public class DemuxRes {
                 sampleByteSize[sampleIndex]
         );
     }
+
+    public long getSampleFileOffset(int sampleIndex) {
+        // stco = array of chunk file offsets
+        // stsc = array of ChunkInfo(firstChunk, samplesPerChunk, sampleDescIndex)
+        // Walk chunks to find which chunk contains sampleIndex
+
+        int samplesAccum = 0;
+        for (int chunkIdx = 0; chunkIdx < stco.length; chunkIdx++) {
+            int samplesInChunk = getSamplesPerChunk(chunkIdx); // see below
+            if (sampleIndex < samplesAccum + samplesInChunk) {
+                // This chunk contains our sample
+                // Walk sample sizes within chunk to get byte offset
+                int sampleWithinChunk = sampleIndex - samplesAccum;
+                long offset = stco[chunkIdx];
+                for (int i = 0; i < sampleWithinChunk; i++) {
+                    offset += sampleByteSize[samplesAccum + i];
+                }
+                return offset;
+            }
+            samplesAccum += samplesInChunk;
+        }
+        throw new IllegalStateException("Could not find file offset for sample " + sampleIndex);
+    }
+
+    private int getSamplesPerChunk(int chunkIdx) {
+        // stsc entries: each entry applies from firstChunk-1 until next entry's firstChunk-1
+        // stsc is sorted by firstChunk ascending
+        int result = stsc[0].getSamplesPerChunk(); // default
+        for (ChunkInfo ci : stsc) {
+            if (ci.getFirstChunk() - 1 <= chunkIdx) { // stco is 0-based, stsc firstChunk is 1-based
+                result = ci.getSamplesPerChunk();
+            } else {
+                break;
+            }
+        }
+        return result;
+    }
 }

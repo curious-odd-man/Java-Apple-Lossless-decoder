@@ -41,10 +41,12 @@ public class AlacContext implements AutoCloseable {
         SampleDuration sampleInfo = demuxRes.getSampleInfo(currentSampleBlock);
         int sampleByteSize = sampleInfo.getSampleByteSize();
 
+        // Seek to exact file position of this sample
+        long sampleOffset = demuxRes.getSampleFileOffset(currentSampleBlock);
+        inputStream.seek(sampleOffset);
         inputStream.read(sampleByteSize, readBuffer, 0);
 
         /* now fetch */
-
         int outputSizeBytes = alacFileData.decodeFrame(readBuffer, destBuffer);
 
         currentSampleBlock++;
