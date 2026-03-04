@@ -253,7 +253,7 @@ public class AlacFileData {
         ibIdx = 0;
 
         int channels = readbits(3);
-        int outputSize = outputSamples * bytesPerSample;
+        int outputSizeBytes = outputSamples * bytesPerSample;
 
         if (channels == 0) {// 1 channel
             /* 2^result = something to do with output waiting.
@@ -270,7 +270,7 @@ public class AlacFileData {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputSamples = readbits(32);
-                outputSize = outputSamples * bytesPerSample;
+                outputSizeBytes = outputSamples * bytesPerSample;
             }
 
             int readSampleSize = sampleSizeRaw - uncompressedBytes * 8;
@@ -406,7 +406,7 @@ public class AlacFileData {
                 /* now read the number of samples,
                  * as a 32bit integer */
                 outputSamples = readbits(32);
-                outputSize = outputSamples * bytesPerSample;
+                outputSizeBytes = outputSamples * bytesPerSample;
             }
 
             int readSampleSize = sampleSizeRaw - uncompressedBytes * 8 + 1;
@@ -540,7 +540,7 @@ public class AlacFileData {
                 default:
             }
         }
-        return outputSize;
+        return outputSizeBytes;
     }
 
     private int getAudioBits() {
