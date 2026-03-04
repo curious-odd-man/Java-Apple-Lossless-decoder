@@ -10,6 +10,7 @@
  */
 package com.github.curiousoddman.alacdecoder.data;
 
+import com.github.curiousoddman.alacdecoder.utils.ByteArrayReader;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,11 +47,8 @@ public class AlacFileData {
     private int eight2 = 0; // 0x000020e7
     private int eight6 = 0; // 0x00069fe4
     private int eigthARate = 0; // 0x0000ac44
+    private ByteArrayReader byteArrayReader;
 
-    private byte[] inputBuffer;
-    private int inputBufferIndex = 0;
-    private int inputBufferBitAccumulator = 0; /* used so we can do arbitary
-						bit reads */
     private int[] outputSamplesBufferA = new int[BUFFER_SIZE];
     private int[] outputSamplesBufferB = new int[BUFFER_SIZE];
 
@@ -60,7 +58,7 @@ public class AlacFileData {
         this.bytesPerSample = sampleSize / 8 * numChannels;
     }
 
-    public void setInfo(int[] inputBuffer) {
+    public void setInfo(int[] buffer) {
         int ptrIndex = 0;
         ptrIndex += 4; // size
         ptrIndex += 4; // frma
@@ -69,113 +67,53 @@ public class AlacFileData {
         ptrIndex += 4; // alac
         ptrIndex += 4; // 0 ?
 
-        maxSamplesPerFrame = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3]; // buffer size / 2 ?
+        maxSamplesPerFrame = (buffer[ptrIndex] << 24) + (buffer[ptrIndex + 1] << 16) + (buffer[ptrIndex + 2] << 8) + buffer[ptrIndex + 3]; // buffer size / 2 ?
         ptrIndex += 4;
-        sevenA = inputBuffer[ptrIndex];
+        sevenA = buffer[ptrIndex];
         ptrIndex += 1;
-        sampleSizeRaw = inputBuffer[ptrIndex];
+        sampleSizeRaw = buffer[ptrIndex];
         ptrIndex += 1;
-        riceHistoryMult = inputBuffer[ptrIndex] & 0xff;
+        riceHistoryMult = buffer[ptrIndex] & 0xff;
         ptrIndex += 1;
-        riceInitialhistory = inputBuffer[ptrIndex] & 0xff;
+        riceInitialhistory = buffer[ptrIndex] & 0xff;
         ptrIndex += 1;
-        riceKmodifier = inputBuffer[ptrIndex] & 0xff;
+        riceKmodifier = buffer[ptrIndex] & 0xff;
         ptrIndex += 1;
-        sevenF = inputBuffer[ptrIndex];
+        sevenF = buffer[ptrIndex];
         ptrIndex += 1;
-        eight0 = (inputBuffer[ptrIndex] << 8) + inputBuffer[ptrIndex + 1];
+        eight0 = (buffer[ptrIndex] << 8) + buffer[ptrIndex + 1];
         ptrIndex += 2;
-        eight2 = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
+        eight2 = (buffer[ptrIndex] << 24) + (buffer[ptrIndex + 1] << 16) + (buffer[ptrIndex + 2] << 8) + buffer[ptrIndex + 3];
         ptrIndex += 4;
-        eight6 = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
+        eight6 = (buffer[ptrIndex] << 24) + (buffer[ptrIndex + 1] << 16) + (buffer[ptrIndex + 2] << 8) + buffer[ptrIndex + 3];
         ptrIndex += 4;
-        eigthARate = (inputBuffer[ptrIndex] << 24) + (inputBuffer[ptrIndex + 1] << 16) + (inputBuffer[ptrIndex + 2] << 8) + inputBuffer[ptrIndex + 3];
-    }
-
-    /* supports reading 1 to 24 bits, in big endian format */
-    int readBits24(int bits) {
-        if (bits <= 0 || bits > 24) {
-            throw new IllegalArgumentException("bits must be 1–24, got" + bits);
-        }
-        int result = read3Bytes();
-
-        /* shift left by the number of bits we've already read,
-         * so that the top 'n' bits of the 24 bits we read will
-         * be the return bits */
-        /* and then only want the top 'n' bits from that, where
-         * n is 'bits' */
-        result = (result << (inputBufferBitAccumulator + 8)) >>> (32 - bits);
-
-        int newAccumulator = inputBufferBitAccumulator + bits;
-
-        /* increase the buffer pointer if we've read over n bytes. */
-        inputBufferIndex += newAccumulator >> 3;
-        /* and the remainder goes back into the bit accumulator */
-        inputBufferBitAccumulator = newAccumulator & 7;
-        return result;
-    }
-
-    /* supports reading 1 to 32 bits, in big endian format */
-    int readBits32(int bits) {
-        if (bits <= 0 || bits > 32) {
-            throw new IllegalArgumentException("bits must be 1–32, got " + bits);
-        }
-
-        int result = 0;
-
-        if (bits > 16) {
-            bits -= 16;
-            result = readBits24(16) << bits;
-        }
-
-        result |= readBits24(bits);
-
-        return result;
-    }
-
-    /* reads a single bit */
-    public int readBit() {
-        int result = inputBuffer[inputBufferIndex] & 0xff;
-        result = result << inputBufferBitAccumulator;
-        result = result >> 7 & 1;
-
-        int newAccumulator = inputBufferBitAccumulator + 1;
-        inputBufferIndex += newAccumulator / 8;
-        inputBufferBitAccumulator = newAccumulator % 8;
-
-        return result;
-    }
-
-    public void unreadbits() {
-        int newAccumulator = inputBufferBitAccumulator - 1;
-        inputBufferIndex += newAccumulator >> 3;
-        inputBufferBitAccumulator = newAccumulator & 7;
+        eigthARate = (buffer[ptrIndex] << 24) + (buffer[ptrIndex + 1] << 16) + (buffer[ptrIndex + 2] << 8) + buffer[ptrIndex + 3];
     }
 
     public int entropyDecodeValue(int readSampleSize, int k, int riceKmodifierMask) {
         int decodedValue = 0;
 
         // read x, number of 1s before 0 represent the rice value.
-        while (decodedValue <= Defines.RICE_THRESHOLD && readBit() != 0) {
+        while (decodedValue <= Defines.RICE_THRESHOLD && byteArrayReader.readBit() != 0) {
             decodedValue++;
         }
 
         if (decodedValue > Defines.RICE_THRESHOLD) {
             // read the number from the bit stream (raw value)
-            int value = readBits32(readSampleSize);
+            int value = byteArrayReader.readBits32(readSampleSize);
             // mask value
             value &= 0xffffffff >> 32 - readSampleSize;
             decodedValue = value;
         } else {
             if (k != 1) {
-                int extraBits = readBits32(k);
+                int extraBits = byteArrayReader.readBits32(k);
 
                 decodedValue *= (1 << k) - 1 & riceKmodifierMask;
 
                 if (extraBits > 1) {
                     decodedValue += extraBits - 1;
                 } else {
-                    unreadbits();
+                    byteArrayReader.unreadbits();
                 }
             }
         }
@@ -243,17 +181,17 @@ public class AlacFileData {
     }
 
     private FrameHeader decodeFrameHeader(int outputSamples, int outputSizeBytes) {
-        readBits32(4);
-        readBits32(12); // unknown, skip 12 bits
+        byteArrayReader.readBits32(4);
+        byteArrayReader.readBits32(12); // unknown, skip 12 bits
 
-        int hasSize = readBits32(1); // the output sample size is stored soon
-        int uncompressedBytes = readBits32(2); // number of bytes in the (compressed) stream that are not compressed
-        int isNotCompressed = readBits32(1); // whether the frame is compressed
+        int hasSize = byteArrayReader.readBits32(1); // the output sample size is stored soon
+        int uncompressedBytes = byteArrayReader.readBits32(2); // number of bytes in the (compressed) stream that are not compressed
+        int isNotCompressed = byteArrayReader.readBits32(1); // whether the frame is compressed
 
         if (hasSize != 0) {
             /* now read the number of samples,
              * as a 32bit integer */
-            outputSamples = readBits32(32);
+            outputSamples = byteArrayReader.readBits32(32);
             outputSizeBytes = outputSamples * bytesPerSample;
         }
 
@@ -279,12 +217,10 @@ public class AlacFileData {
 
     public int decodeFrame(byte[] inBuffer, int[] outBuffer) {
         /* setup the stream */
-        inputBuffer = inBuffer;
-        inputBufferBitAccumulator = 0;
-        inputBufferIndex = 0;
+        byteArrayReader = new ByteArrayReader(inBuffer);
         int outputSizeBytes;
 
-        int channels = readBits32(3);
+        int channels = byteArrayReader.readBits32(3);
 
         if (channels == 0) {// 1 channel
             FrameHeader frameHeader = decodeFrameHeader(maxSamplesPerFrame, maxSamplesPerFrame * bytesPerSample);
@@ -295,20 +231,20 @@ public class AlacFileData {
             if (frameHeader.isNotCompressed == 0) { // so it is compressed
                 /* skip 16 bits, not sure what they are. seem to be used in
                  * two channel case */
-                readBits32(8);
-                readBits32(8);
+                byteArrayReader.readBits32(8);
+                byteArrayReader.readBits32(8);
 
-                int predictionType = readBits32(4);
-                int predictionQuantization = readBits32(4);
+                int predictionType = byteArrayReader.readBits32(4);
+                int predictionQuantization = byteArrayReader.readBits32(4);
 
-                int riceModifier = readBits32(3);
-                int predictorCoefNum = readBits32(5);
+                int riceModifier = byteArrayReader.readBits32(3);
+                int predictorCoefNum = byteArrayReader.readBits32(5);
 
                 /* read the predictor table */
 
                 int i;
                 for (i = 0; i < predictorCoefNum; i++) {
-                    int tempPred = readBits32(16);
+                    int tempPred = byteArrayReader.readBits32(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -319,7 +255,7 @@ public class AlacFileData {
 
                 if (uncompressedBytes != 0) {
                     for (i = 0; i < outputSamples; i++) {
-                        uncompressedBytesBufferA[i] = readBits32(uncompressedBytes * 8);
+                        uncompressedBytesBufferA[i] = byteArrayReader.readBits32(uncompressedBytes * 8);
                     }
                 }
 
@@ -327,7 +263,7 @@ public class AlacFileData {
             } else { // not compressed, easy case
                 if (sampleSizeRaw <= 16) {
                     for (int i = 0; i < outputSamples; i++) {
-                        int audiobits = readBits32(sampleSizeRaw);
+                        int audiobits = byteArrayReader.readBits32(sampleSizeRaw);
                         int bitsmove = 32 - sampleSizeRaw;
 
                         audiobits = audiobits << bitsmove >> bitsmove;
@@ -409,21 +345,21 @@ public class AlacFileData {
             int interlacingLeftWeight;
             int interlacingShift;
             if (frameHeader.isNotCompressed == 0) { // compressed
-                interlacingShift = readBits32(8);
-                interlacingLeftWeight = readBits32(8);
+                interlacingShift = byteArrayReader.readBits32(8);
+                interlacingLeftWeight = byteArrayReader.readBits32(8);
 
                 /* ******* channel 1 ***********/
-                int predictionTypeA = readBits32(4);
-                int predictionQuantitizationA = readBits32(4);
+                int predictionTypeA = byteArrayReader.readBits32(4);
+                int predictionQuantitizationA = byteArrayReader.readBits32(4);
 
-                int ricemodifierA = readBits32(3);
-                int predictorCoefNumA = readBits32(5);
+                int ricemodifierA = byteArrayReader.readBits32(3);
+                int predictorCoefNumA = byteArrayReader.readBits32(5);
 
                 /* read the predictor table */
 
                 int tempPred;
                 for (int i = 0; i < predictorCoefNumA; i++) {
-                    tempPred = readBits32(16);
+                    tempPred = byteArrayReader.readBits32(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -432,16 +368,16 @@ public class AlacFileData {
                 }
 
                 /* ******* channel 2 *********/
-                int predictionTypeB = readBits32(4);
-                int predictionQuantitizationB = readBits32(4);
+                int predictionTypeB = byteArrayReader.readBits32(4);
+                int predictionQuantitizationB = byteArrayReader.readBits32(4);
 
-                int ricemodifierB = readBits32(3);
-                int predictorCoefNumB = readBits32(5);
+                int ricemodifierB = byteArrayReader.readBits32(3);
+                int predictorCoefNumB = byteArrayReader.readBits32(5);
 
                 /* read the predictor table */
 
                 for (int i = 0; i < predictorCoefNumB; i++) {
-                    tempPred = readBits32(16);
+                    tempPred = byteArrayReader.readBits32(16);
                     if (tempPred > 32767) {
                         // the predictor coef table values are only 16 bit signed
                         tempPred = tempPred - 65536;
@@ -452,8 +388,8 @@ public class AlacFileData {
                 /* ********************/
                 if (uncompressedBytes != 0) { // see mono case
                     for (int i = 0; i < outputSamples; i++) {
-                        uncompressedBytesBufferA[i] = readBits32(uncompressedBytes * 8);
-                        uncompressedBytesBufferB[i] = readBits32(uncompressedBytes * 8);
+                        uncompressedBytesBufferA[i] = byteArrayReader.readBits32(uncompressedBytes * 8);
+                        uncompressedBytesBufferB[i] = byteArrayReader.readBits32(uncompressedBytes * 8);
                     }
                 }
 
@@ -477,8 +413,8 @@ public class AlacFileData {
 
                     for (int i = 0; i < outputSamples; i++) {
 
-                        int audiobits_a = readBits32(sampleSizeRaw);
-                        int audiobits_b = readBits32(sampleSizeRaw);
+                        int audiobits_a = byteArrayReader.readBits32(sampleSizeRaw);
+                        int audiobits_b = byteArrayReader.readBits32(sampleSizeRaw);
 
                         int bitsmove = 32 - sampleSizeRaw;
 
@@ -545,17 +481,11 @@ public class AlacFileData {
     }
 
     private int getAudioBits() {
-        int audioBits = readBits32(16);
+        int audioBits = byteArrayReader.readBits32(16);
         /* special case of sign extension..
          * as we'll be ORing the low 16bits into this */
         audioBits = audioBits << sampleSizeRaw - 16;
-        audioBits = audioBits | readBits32(sampleSizeRaw - 16);
+        audioBits = audioBits | byteArrayReader.readBits32(sampleSizeRaw - 16);
         return audioBits;
-    }
-
-    private int read3Bytes() {
-        return ((inputBuffer[inputBufferIndex] & 0xff) << 16)
-                | ((inputBuffer[inputBufferIndex + 1] & 0xff) << 8)
-                | (inputBuffer[inputBufferIndex + 2] & 0xff);
     }
 }
