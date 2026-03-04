@@ -23,6 +23,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class DataInputStreamWrapper {
     private final DataInputStream stream;
+    private final long fileSize; // total size of the underlying file/stream
     private final byte[] readBuf = new byte[8];
 
     private int currentPos = 0;
@@ -76,5 +77,9 @@ public class DataInputStreamWrapper {
         }
 
         currentPos += stream.skipBytes(skip);
+    }
+
+    public long getRemainingBytes() {
+        return fileSize - currentPos;
     }
 }

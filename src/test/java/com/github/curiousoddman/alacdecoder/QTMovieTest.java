@@ -26,7 +26,7 @@ class QTMovieTest {
         try (ByteArrayInputStream byteStream = new ByteArrayInputStream(data)) {
 
             // Mock the stream object
-            DataInputStreamWrapper streamWrapper = spy(new DataInputStreamWrapper(new DataInputStream(byteStream)));
+            DataInputStreamWrapper streamWrapper = spy(new DataInputStreamWrapper(new DataInputStream(byteStream), data.length));
 
             // Mock QTMovie to return our streamWrapper
             QTMovie qtmovie = new QTMovie(streamWrapper);
@@ -60,7 +60,7 @@ class QTMovieTest {
         InputStream mock = mock();
         when(mock.skip(anyLong())).thenAnswer(invocation -> (long)invocation.getArgument(0));
         DataInputStream dataInputStream = new AlacInputStream(mock);
-        DataInputStreamWrapper streamWrapper = new DataInputStreamWrapper(dataInputStream);
+        DataInputStreamWrapper streamWrapper = new DataInputStreamWrapper(dataInputStream, 100);
         QTMovie qtmovie = new QTMovie(streamWrapper);
 
         // Call the method

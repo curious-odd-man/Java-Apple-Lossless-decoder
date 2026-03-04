@@ -310,17 +310,13 @@ public class AlacFileData {
 
                 if (predictionType == 0) { // adaptive fir
                     setOutputSamplesBufferA(predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantization));
+                } else if (predictionType == 14 || predictionType == 15 || predictionType == 31) { // double-pass adaptive fir
+                    log.debug("Using double-pass FIR for prediction type {}", predictionType);
+                    int[] tempBuffer = predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantization);
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(tempBuffer, outputSamples, readSampleSize, predictorCoefTable, predictorCoefNum, predictionQuantization));
                 } else {
-                    log.error("FIXME: unhandled predicition type: {}", predictionType);
-
-                    /* i think the only other prediction type (or perhaps this is just a
-                     * boolean?) runs adaptive fir twice.. like:
-                     * predictor_decompress_fir_adapt(predictor_error, tempout, ...)
-                     * predictor_decompress_fir_adapt(predictor_error, outputSamples ...)
-                     * little strange..
-                     */
+                    log.error("FIXME: unhandled prediction type: {}", predictionType);
                 }
-
             } else { // not compressed, easy case
                 if (sampleSizeRaw <= 16) {
                     for (int i = 0; i < outputSamples; i++) {
@@ -472,16 +468,24 @@ public class AlacFileData {
 
                 if (predictionTypeA == 0) { // adaptive fir
                     setOutputSamplesBufferA(predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTableA, predictorCoefNumA, predictionQuantitizationA));
-                } else { // see mono case
-                    log.error("FIXME: unhandled predicition type: {}", predictionTypeA);
+                } else if (predictionTypeA == 14 || predictionTypeA == 15 || predictionTypeA == 31) { // double-pass adaptive fir
+                    log.debug("Using double-pass FIR for prediction type {}", predictionTypeA);
+                    int[] tempBuffer = predictorDecompressFirAdapt(predictErrorBufferA, outputSamples, readSampleSize, predictorCoefTableA, predictorCoefNumA, predictionQuantitizationA);
+                    setOutputSamplesBufferA(predictorDecompressFirAdapt(tempBuffer, outputSamples, readSampleSize, predictorCoefTableA, predictorCoefNumA, predictionQuantitizationA));
+                } else {
+                    log.error("FIXME: unhandled prediction type: {}", predictionTypeA);
                 }
 
                 /* channel 2 */
                 entropyRiceDecode(predictErrorBufferB, outputSamples, readSampleSize, ricemodifierB * (riceHistoryMult / 4));
                 if (predictionTypeB == 0) { // adaptive fir
                     setOutputSamplesBufferB(predictorDecompressFirAdapt(predictErrorBufferB, outputSamples, readSampleSize, predictorCoefTableB, predictorCoefNumB, predictionQuantitizationB));
+                } else if (predictionTypeB == 14 || predictionTypeB == 15 || predictionTypeB == 31) { // double-pass adaptive fir
+                    log.debug("Using double-pass FIR for prediction type {}", predictionTypeB);
+                    int[] tempBuffer = predictorDecompressFirAdapt(predictErrorBufferB, outputSamples, readSampleSize, predictorCoefTableB, predictorCoefNumB, predictionQuantitizationB);
+                    setOutputSamplesBufferB(predictorDecompressFirAdapt(tempBuffer, outputSamples, readSampleSize, predictorCoefTableB, predictorCoefNumB, predictionQuantitizationB));
                 } else {
-                    log.error("FIXME: unhandled predicition type: {}", predictionTypeB);
+                    log.error("FIXME: unhandled prediction type: {}", predictionTypeB);
                 }
             } else { // not compressed, easy case
                 if (sampleSizeRaw <= 16) {
