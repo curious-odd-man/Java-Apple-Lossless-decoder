@@ -19,7 +19,7 @@ public class SamplingUtils {
                 break;
 
             case 2:
-                int temp = 0;
+                int temp;
                 while (samcnt > 0) {
                     temp = src[counter2];
                     dst[counter] = (byte) temp;

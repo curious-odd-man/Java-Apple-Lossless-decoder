@@ -1,8 +1,6 @@
 package com.github.curiousoddman.alacdecoder.stream;
 
 import java.io.DataInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -18,11 +16,5 @@ public class AlacInputStream extends DataInputStream {
      */
     public AlacInputStream(InputStream in) {
         super(in);
-    }
-
-    public void seek(long pos) throws IOException {
-        if (in instanceof FileInputStream) {
-            ((FileInputStream) in).getChannel().position(pos);
-        }
     }
 }

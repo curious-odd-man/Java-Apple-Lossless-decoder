@@ -104,9 +104,6 @@ public class QTMovie {
             }
         }
 
-        if (foundMoov && foundMdat) {
-            return 1;
-        }
         throw new IOException("Incomplete MP4 file: foundMoov=" + foundMoov + ", foundMdat=" + foundMdat);
     }
 
@@ -532,7 +529,7 @@ public class QTMovie {
     }
 
     MdatStatus setSavedMdat() {
-        if (getSavedMdatPos() == -1) {
+        if (savedMdatPos == -1) {
             return MdatStatus.NO_VALID_POS;
         }
 

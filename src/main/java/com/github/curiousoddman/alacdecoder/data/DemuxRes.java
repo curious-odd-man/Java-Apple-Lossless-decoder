@@ -36,27 +36,27 @@ public class DemuxRes {
     private int mdatLen;
 
     public SampleDuration getSampleInfo(int sampleIndex) {
-        if (sampleIndex >= getSampleByteSize().length) {
+        if (sampleIndex >= sampleByteSize.length) {
             throw new IllegalStateException("sample " + sampleIndex + " does not exist ");
         }
 
-        if (getTimeToSample().isEmpty()) {
+        if (timeToSample.isEmpty()) {
             throw new IllegalStateException("no time to samples");
         }
 
         int durationCurIndex = 0;
         int durationIndexAccum = 0;
-        while (getTimeToSample().get(durationCurIndex).getSampleCount() + durationIndexAccum <= sampleIndex) {
-            durationIndexAccum += getTimeToSample().get(durationCurIndex).getSampleCount();
+        while (timeToSample.get(durationCurIndex).getSampleCount() + durationIndexAccum <= sampleIndex) {
+            durationIndexAccum += timeToSample.get(durationCurIndex).getSampleCount();
             durationCurIndex++;
-            if (durationCurIndex >= getTimeToSample().size()) {
+            if (durationCurIndex >= timeToSample.size()) {
                 throw new IllegalStateException("sample " + sampleIndex + " does not have a duration");
             }
         }
 
         return new SampleDuration(
-                getTimeToSample().get(durationCurIndex).getSampleDuration(),
-                getSampleByteSize()[sampleIndex]
+                timeToSample.get(durationCurIndex).getSampleDuration(),
+                sampleByteSize[sampleIndex]
         );
     }
 }
