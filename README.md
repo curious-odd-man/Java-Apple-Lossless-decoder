@@ -18,13 +18,13 @@ Maven:
 <dependency>
     <groupId>com.github.curious-odd-man</groupId>
     <artifactId>alac2wav</artifactId>
-    <version>1.0</version>
+    <version>1.2</version>
 </dependency>
 ```
 
 Gradle:
 ```groovy
-implementation("com.github.curious-odd-man:alac2wav:1.0")
+implementation("com.github.curious-odd-man:alac2wav:1.2")
 ```
 
 ## See sample code
