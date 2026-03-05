@@ -28,21 +28,6 @@ public class EndToEndTests {
     }
 
     @Test
-    void convertAlacToWavCustomTest() throws IOException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        AlacDecoder
-                .decode(WavFormat.RAW_PCM)
-                .fromFile(Path.of("D:\\iTunes\\iTunes 1\\iTunes Media\\Music\\Queen\\Greatest Hits III\\1-01 We Will Rock You.m4a"))
-                .toStream(byteArrayOutputStream)
-                .execute();
-
-        byte[] output = byteArrayOutputStream.toByteArray();
-        byte[] expected = Files.readAllBytes(Path.of("src/test/resources/white_noise.wav"));
-        //Files.write(Path.of("src/test/resources/white_noise.act.wav"), output);
-        assertArrayEquals(expected, output);
-    }
-
-    @Test
     void convertAlacToWavMonoTest() throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
