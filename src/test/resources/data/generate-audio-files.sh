@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# AI Generated
 # NOTE: this script requires ffmpeg.
 
 set -e
