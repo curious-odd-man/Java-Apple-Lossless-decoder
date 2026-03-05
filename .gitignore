@@ -2,3 +2,4 @@
 .idea
 target/
 *.iml
+/src/test/resources/data/alac_test_audio/
