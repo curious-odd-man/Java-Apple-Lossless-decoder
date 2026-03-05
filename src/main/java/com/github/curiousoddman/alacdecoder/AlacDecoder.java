@@ -6,6 +6,7 @@ import com.github.curiousoddman.alacdecoder.utils.AlacUtils;
 import com.github.curiousoddman.alacdecoder.utils.SamplingUtils;
 import com.github.curiousoddman.alacdecoder.utils.WavUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 
 import java.io.*;
@@ -25,6 +26,7 @@ public class AlacDecoder {
          * @param path path to ALAC file
          * @return AlacDecoderWithInputBuilder
          */
+        @SneakyThrows
         public AlacDecoderWithInputBuilder fromFile(Path path) {
             return fromStream(
                     () -> {
@@ -33,7 +35,8 @@ public class AlacDecoder {
                         } catch (FileNotFoundException e) {
                             throw new RuntimeException(e);
                         }
-                    }
+                    },
+                    Files.size(path)
             );
         }
 
@@ -43,8 +46,8 @@ public class AlacDecoder {
          * @param inputStreamSupplier NOTE, supplier will be invoked multiple times (i.e. stream should be re-created in supplier).
          * @return AlacDecoderWithInputBuilder
          */
-        public AlacDecoderWithInputBuilder fromStream(Supplier<InputStream> inputStreamSupplier) {
-            return new AlacDecoderWithInputBuilder(inputStreamSupplier, wavFormat);
+        public AlacDecoderWithInputBuilder fromStream(Supplier<InputStream> inputStreamSupplier, long fileSize) {
+            return new AlacDecoderWithInputBuilder(inputStreamSupplier, wavFormat, fileSize);
         }
     }
 
@@ -52,6 +55,7 @@ public class AlacDecoder {
     public static class AlacDecoderWithInputBuilder {
         private final Supplier<InputStream> inputStreamSupplier;
         private final WavFormat wavFormat;
+        private final long fileSize;
 
         /**
          * Write result to a file
@@ -71,7 +75,7 @@ public class AlacDecoder {
          * @return AlacDecoderWithInputAndOutputBuilder
          */
         public AlacDecoderWithInputAndOutputBuilder toStream(OutputStream outputStream) {
-            return new AlacDecoderWithInputAndOutputBuilder(inputStreamSupplier, outputStream, wavFormat);
+            return new AlacDecoderWithInputAndOutputBuilder(inputStreamSupplier, outputStream, wavFormat, fileSize);
         }
     }
 
@@ -80,6 +84,7 @@ public class AlacDecoder {
         private final Supplier<InputStream> inputStreamSupplier;
         private final OutputStream outputStream;
         private final WavFormat wavFormat;
+        private final long fileSize;
 
         /**
          * Execute conversion
@@ -87,7 +92,7 @@ public class AlacDecoder {
          * @throws IOException any IO errors
          */
         public void execute() throws IOException {
-            try (AlacContext ac = AlacUtils.createContext(inputStreamSupplier);
+            try (AlacContext ac = AlacUtils.createContext(inputStreamSupplier, fileSize);
                  outputStream) {
                 int numChannels = ac.getNumChannels();
                 int totalSamples = ac.getNumSamples();

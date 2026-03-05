@@ -15,17 +15,27 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 @Getter
 @Setter
 @RequiredArgsConstructor
 public class DataInputStreamWrapper {
-    private final DataInputStream stream;
+    private final InputStream stream;
+    private final long fileSize; // total size of the underlying file/stream
     private final byte[] readBuf = new byte[8];
 
-    private int currentPos = 0;
+    private long currentPos = 0;
+
+    public void seek(long absolutePos) throws IOException {
+        if (!(stream instanceof FileInputStream fis)) {
+            throw new IOException("Seek not supported on this stream type");
+        }
+        fis.getChannel().position(absolutePos);
+        currentPos = absolutePos;
+    }
 
     public void read(int size, int[] buf, int startPos) throws IOException {
         byte[] byteBuf = new byte[size];
@@ -70,11 +80,20 @@ public class DataInputStreamWrapper {
         return v;
     }
 
-    public void skip(int skip) throws IOException {
+    public void skip(long skip) throws IOException {
         if (skip < 0) {
             throw new IOException("Cannot skip backwards...");
         }
 
-        currentPos += stream.skipBytes(skip);
+        stream.skipNBytes(skip);
+        currentPos += skip;
+    }
+
+    public long getRemainingBytes() {
+        return fileSize - currentPos;
+    }
+
+    public void close() throws IOException {
+        stream.close();
     }
 }

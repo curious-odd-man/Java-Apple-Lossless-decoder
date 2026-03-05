@@ -11,9 +11,9 @@
 
 package com.github.curiousoddman.alacdecoder.stream;
 
+import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
 import com.github.curiousoddman.alacdecoder.data.DemuxRes;
 import com.github.curiousoddman.alacdecoder.data.MdatStatus;
-import com.github.curiousoddman.alacdecoder.data.ChunkInfo;
 import com.github.curiousoddman.alacdecoder.data.SampleInfo;
 import com.github.curiousoddman.alacdecoder.utils.UnsupportedFormatException;
 import lombok.Data;
@@ -32,13 +32,13 @@ import static com.github.curiousoddman.alacdecoder.utils.DemuxUtils.splitFourCC;
 public class QTMovie {
     private final DataInputStreamWrapper qtstream;
     private DemuxRes res;
-    private int savedMdatPos = 0;
+    private long savedMdatPos = 0;
 
     public int read(DemuxRes demuxRes) throws IOException {
         /* construct the stream */
         res = demuxRes;
 
-        // reset demuxResT	TODO
+        // reset demuxResT  TODO
 
         /* read the chunks */
         boolean foundMdat = false;
@@ -46,6 +46,31 @@ public class QTMovie {
         while (true) {
             int chunkLen = getChunkLen();
             int chunkId = qtstream.readUint32();
+
+            // size=0 means this box extends to end of file per ISO 14496-12
+            if (chunkLen == 0) {
+                // In valid M4A files, only mdat uses size=0 (extends to EOF).
+                // If chunkId looks corrupt/blank, the bytes we read were actually
+                // the start of mdat audio data — push them back if possible,
+                // or just proceed to handle as mdat regardless.
+                boolean isMdat = chunkId == makeFourCC(109, 100, 97, 116);
+                boolean isBlank = chunkId == 0 || splitFourCC(chunkId).isBlank();
+
+                if (isMdat || isBlank) {
+                    if (isBlank) {
+                        log.warn("(top) size=0 with blank chunkId — assuming mdat to EOF (iTunes M4A pattern)");
+                    }
+                    readChunkMdat(0, !foundMoov);
+                    if (foundMoov) {
+                        return 1;
+                    }
+                    foundMdat = true;
+                } else {
+                    log.warn("(top) size=0 on unexpected chunk: {}, skipping to EOF", splitFourCC(chunkId));
+                }
+                break; // size=0 is always the last box
+            }
+
             if (chunkId == makeFourCC(102, 116, 121, 112)) {  // fourcc equals ftyp
                 readChunkFtyp(chunkLen);
             } else if (chunkId == makeFourCC(109, 111, 111, 118)) {   // fourcc equals moov
@@ -73,9 +98,13 @@ public class QTMovie {
             } else if (chunkId == makeFourCC(106, 117, 110, 107)) {// fourcc equals junk
                 qtstream.skip(chunkLen - 8); // FIXME not 8
             } else {
-                throw new IllegalStateException("(top) unknown chunk id: " + splitFourCC(chunkId));
+                // Skip unknown chunks rather than crashing — common with non-standard encoders
+                log.warn("(top) unknown chunk id: {}, skipping {} bytes", splitFourCC(chunkId), chunkLen - 8);
+                qtstream.skip(chunkLen - 8);
             }
         }
+
+        throw new IOException("Incomplete MP4 file: foundMoov=" + foundMoov + ", foundMdat=" + foundMdat);
     }
 
     private int getChunkLen() {
@@ -480,8 +509,15 @@ public class QTMovie {
     }
 
     void readChunkMdat(int chunkLen, boolean skipMdat) throws IOException {
-        int sizeRemaining = chunkLen - 8; // FIXME WRONG
-        if (sizeRemaining == 0) {
+        final int sizeRemaining;
+        if (chunkLen == 0) {
+            // mdat extends to EOF — 8 bytes already consumed for the header
+            sizeRemaining = (int) qtstream.getRemainingBytes();
+        } else {
+            sizeRemaining = chunkLen - 8; // FIXME header size not always 8
+        }
+
+        if (sizeRemaining <= 0) {
             return;
         }
 
@@ -493,7 +529,7 @@ public class QTMovie {
     }
 
     MdatStatus setSavedMdat() {
-        if (getSavedMdatPos() == -1) {
+        if (savedMdatPos == -1) {
             return MdatStatus.NO_VALID_POS;
         }
 

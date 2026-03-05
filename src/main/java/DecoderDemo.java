@@ -24,15 +24,16 @@ import static com.github.curiousoddman.alacdecoder.utils.SamplingUtils.formatSam
 public class DecoderDemo {
     public static void main(String[] args) throws IOException {
         Config config = readCmdArgs(args.length, args);// checks all the parameters passed on command line
+        Path path = Path.of(config.inputFileName());
 
         try (FileOutputStream fileOutputStream = new FileOutputStream(config.outputFileName());
              AlacContext ac = AlacUtils.createContext(() -> {
                  try {
-                     return Files.newInputStream(Path.of(config.inputFileName()));
+                     return Files.newInputStream(path);
                  } catch (IOException e) {
                      throw new RuntimeException(e);
                  }
-             })) {
+             }, Files.size(path))) {
 
             int numChannels = ac.getNumChannels();
             System.out.println("The Apple Lossless file has " + numChannels + " channels");
